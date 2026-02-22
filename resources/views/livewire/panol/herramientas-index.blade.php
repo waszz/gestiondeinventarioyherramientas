@@ -2,6 +2,8 @@
 
     <h2 class="text-2xl font-bold mb-6">Gestión de Herramientas</h2>
 
+
+
     @if (session()->has('success'))
         <div class="bg-green-100 text-green-700 p-3 rounded mb-4">
             {{ session('success') }}
@@ -37,6 +39,62 @@
         <option value="fuera_servicio">Fuera de servicio</option>
     </select>
 
+   @php
+    $stockActual = \App\Models\Bateria::first()?->stock_total ?? 0;
+
+    $colorBadge = $stockActual < 5 
+        ? 'bg-red-100 text-red-700'
+        : ($stockActual < 10 
+            ? 'bg-yellow-100 text-yellow-700'
+            : 'bg-green-100 text-green-700');
+@endphp
+
+<div class="mb-6 p-5 bg-white shadow-sm rounded-xl border border-gray-200 flex flex-wrap items-center justify-between gap-6">
+
+    {{-- Stock visual --}}
+    <div class="flex items-center gap-4">
+
+        <div>
+            <div class="text-sm text-gray-500 font-semibold">
+                Stock actual de baterías
+            </div>
+
+            <div class="mt-1">
+                <span class="px-3 py-2 rounded-full text-lg font-bold {{ $colorBadge }}">
+                    {{ $stockActual }}
+                </span>
+            </div>
+        </div>
+
+    </div>
+
+    {{-- Editor --}}
+    <div class="flex items-end gap-3">
+
+        <div class="flex flex-col">
+            <label class="text-sm font-semibold text-gray-600 mb-1">
+                Modificar stock
+            </label>
+           <input 
+                type="number"
+                wire:model.defer="nuevoStockBaterias"
+                step="1"
+                class="w-32 px-3 py-2 text-sm border border-gray-300 rounded-lg 
+                    focus:outline-none focus:ring-2 focus:ring-blue-500 
+                    focus:border-blue-500 transition"
+            >
+        </div>
+
+        <button 
+            wire:click="guardarStockBaterias"
+            class="bg-blue-600 hover:bg-blue-700 text-white text-sm 
+                   px-4 py-2 rounded-lg shadow-sm transition">
+            Guardar
+        </button>
+
+    </div>
+
+</div>
     <!-- Botones de acciones múltiples -->
     <button wire:click="abrirModalPrestamoMultiple"
             class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold">
@@ -56,6 +114,8 @@
                 <tr>
                     <th class="text-left p-3">Nombre</th>
                     <th class="text-left p-3">Código</th>
+                    <th class="text-left p-3">GCI Código</th>
+                    <th class="text-center p-3">Alimentación</th>
                     <th class="text-center p-3">Cantidad Total</th>
                     <th class="text-center p-3">Estado</th>
                     <th class="text-center p-3">Acciones</th>
@@ -66,6 +126,22 @@
                     <tr class="border-b">
                         <td class="p-3">{{ $herramienta->nombre }}</td>
                         <td class="p-3">{{ $herramienta->codigo }}</td>
+                        <td class="p-3">{{ $herramienta->gci_codigo }}</td> 
+                        <td class="p-3 text-center">
+    @if($herramienta->tipo_alimentacion === 'bateria')
+        <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-sm font-semibold">
+            Batería
+        </span>
+    @elseif($herramienta->tipo_alimentacion === 'cable')
+        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm font-semibold">
+             Cable
+        </span>
+    @else
+        <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm">
+            Manual
+        </span>
+    @endif
+</td>
                         <td class="p-3 text-center">{{ $herramienta->cantidad }}</td>
              <td class="p-3">
     <div class="flex flex-col items-center">
@@ -75,10 +151,12 @@
         </div>
 
 {{-- En préstamo con toggle --}}
+
 <div class="text-blue-600 font-semibold w-full mb-1">
+    {{-- Toggle de herramientas --}}
     <button wire:click="togglePrestamos({{ $herramienta->id }})"
             class="flex justify-center items-center gap-1 w-full">
-        En préstamo: {{ $herramienta->cantidad_prestamo }}
+        En préstamo (herramientas): {{ $herramienta->cantidad_prestamo }}
         <span>
             @if(isset($mostrarPrestamos[$herramienta->id]))
                 &#9650; {{-- flecha arriba --}}
@@ -91,14 +169,11 @@
     @if(isset($mostrarPrestamos[$herramienta->id]))
         <ul class="mt-1 text-sm text-center text-gray-700 px-2">
             @php
-                // Filtrar solo los activos
                 $prestamosActivos = $herramienta->prestamos->where('estado', 'prestada');
-
-                // Agrupar por funcionario y sumar cantidad
                 $prestamosAgrupados = $prestamosActivos->groupBy('funcionario_id')->map(function($items) {
                     return [
                         'cantidad' => $items->sum('cantidad'),
-                        'fecha' => $items->first()->created_at, // fecha del primer préstamo
+                        'fecha' => $items->first()->created_at,
                         'funcionario' => $items->first()->funcionario,
                     ];
                 });
@@ -117,6 +192,48 @@
     @endif
 </div>
 
+<div class="text-green-600 font-semibold w-full mb-1">
+    {{-- Toggle de baterías --}}
+    <button wire:click="togglePrestamosBaterias({{ $herramienta->id }})"
+            class="flex justify-center items-center gap-1 w-full">
+        @php
+    $bateriasActivas = $herramienta->prestamos->where('estado', 'prestada')->sum('cantidad_baterias');
+@endphp
+En préstamo (baterías): {{ $bateriasActivas }}
+        <span>
+            @if(isset($mostrarPrestamosBaterias[$herramienta->id]))
+                &#9650; {{-- flecha arriba --}}
+            @else
+                &#9660; {{-- flecha abajo --}}
+            @endif
+        </span>
+    </button>
+
+    @if(isset($mostrarPrestamosBaterias[$herramienta->id]))
+        <ul class="mt-1 text-sm text-center text-gray-700 px-2">
+            @php
+                $prestamosActivos = $herramienta->prestamos->where('estado', 'prestada')->where('cantidad_baterias', '>', 0);
+                $prestamosAgrupados = $prestamosActivos->groupBy('funcionario_id')->map(function($items) {
+                    return [
+                        'cantidad_baterias' => $items->sum('cantidad_baterias'),
+                        'fecha' => $items->first()->created_at,
+                        'funcionario' => $items->first()->funcionario,
+                    ];
+                });
+            @endphp
+
+            @forelse($prestamosAgrupados as $prestamo)
+                <li>
+                    {{ $prestamo['funcionario']->nombre }} {{ $prestamo['funcionario']->apellido }}
+                    (desde: {{ $prestamo['fecha']->format('d/m/Y') }})
+                    - Baterías: {{ $prestamo['cantidad_baterias'] }}
+                </li>
+            @empty
+                <li>Ningún préstamo de baterías</li>
+            @endforelse
+        </ul>
+    @endif
+</div>
         {{-- Fuera de servicio --}}
    <div class="text-red-600 font-semibold">
     <button wire:click="toggleFueraServicio({{ $herramienta->id }})" class="flex items-center gap-1 justify-center w-full">
@@ -159,11 +276,23 @@
                                     {{ $herramienta->estado != 'disponible' ? 'disabled' : '' }}>
                                 Prestar
                             </button>
-                            <button wire:click="abrirModalDevolver({{ $herramienta->id }})"
-                                class="bg-blue-600 text-white px-3 py-1 rounded"
-                                {{ $herramienta->cantidad_prestamo == 0 ? 'disabled' : '' }}>
-                            Devolver
-                        </button>
+   @php
+    // Herramientas pendientes
+    $herramientasPendientes = $herramienta->cantidad_prestamo > 0;
+
+    // Baterías prestadas activas
+    $prestamosActivos = $herramienta->prestamos->where('estado', 'prestada');
+    $bateriasPendientes = $prestamosActivos->sum('cantidad_baterias');
+
+    // Activar botón si hay herramientas o baterías pendientes
+    $pendienteDevolver = $herramientasPendientes || $bateriasPendientes > 0;
+@endphp
+
+<button wire:click="abrirModalDevolver({{ $herramienta->id }})"
+        class="bg-blue-600 text-white px-3 py-1 rounded disabled:opacity-50"
+        {{ $pendienteDevolver ? '' : 'disabled' }}>
+    Devolver
+</button>
                             <button wire:click="abrirModalFueraServicio({{ $herramienta->id }})"
                                     class="bg-red-600 text-white px-3 py-1 rounded"
                                     {{ $herramienta->estado == 'fuera_servicio' ? 'disabled' : '' }}>
@@ -377,6 +506,7 @@
                     <th class="text-left p-3">Fecha</th>
                     <th class="text-left p-3">Herramienta</th>
                     <th class="text-left p-3">Tipo</th>
+                    <th class="px-3 py-2">Baterías</th>
                     <th class="text-left p-3">Funcionario</th>
                     <th class="text-left p-3">Detalle</th>
                 </tr>
@@ -401,6 +531,16 @@
                         <td class="p-3 capitalize">
                             {{ str_replace('_',' ', $item->tipo) }}
                         </td>
+                        <td class="px-3 py-2 text-center">
+                            @if($item->cantidad_baterias > 0)
+                                <span class="inline-flex items-center gap-1 bg-green-100 text-green-700 
+                                            px-2 py-1 rounded-full text-xs font-semibold">
+                                    {{ $item->cantidad_baterias }}
+                                </span>
+                            @else
+                                <span class="text-gray-400">—</span>
+                            @endif
+                        </td>
 
                         <td class="p-3">
                             {{ $item->funcionario ?? 'N/A' }}
@@ -419,7 +559,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="text-center p-6 text-gray-500">
+                        <td colspan="6" class="text-center p-6 text-gray-500">
                             No hay movimientos registrados
                         </td>
                     </tr>
@@ -472,6 +612,18 @@
             <label class="text-sm font-semibold">Cantidad</label>
             <input type="number" wire:model="cantidadPrestamo" class="w-full border rounded p-2" min="1" max="{{ $herramientaSeleccionada->cantidad }}">
         </div>
+   @if($herramientaSeleccionada->tipo_alimentacion === 'bateria')
+    <div class="mb-3">
+        <label class="text-sm font-semibold">
+            Cantidad de baterías (Disponibles: {{ $stockBaterias }})
+        </label>
+        <input type="number"
+               wire:model="cantidadBateriasPrestamo"
+               class="w-full border rounded p-2"
+               min="0"
+               max="{{ $stockBaterias }}">
+    </div>
+@endif
 
         <div class="mb-4">
             <label class="text-sm font-semibold">Funcionario</label>
@@ -500,6 +652,33 @@
             <label class="text-sm font-semibold">Cantidad a devolver</label>
             <input type="number" wire:model="cantidadPrestamo" class="w-full border rounded p-2" min="1" max="{{ $herramientaSeleccionada->cantidad_prestamo }}">
         </div>
+
+        {{--SOLO SI ES A BATERÍA --}}
+@if($herramientaSeleccionada->tipo_alimentacion === 'bateria')
+
+    @php
+        $prestamosActivos = $herramientaSeleccionada->prestamos
+            ->where('estado', 'prestada');
+
+        $totalBateriasPrestadas = $prestamosActivos->sum('cantidad_baterias');
+    @endphp
+
+    <div class="mb-3">
+        <label class="text-sm font-semibold">
+            Cantidad de baterías a devolver
+            <span class="text-xs text-gray-500">
+                (Prestadas: {{ $totalBateriasPrestadas }})
+            </span>
+        </label>
+
+        <input type="number"
+               wire:model="cantidadBateriasDevolucion"
+               min="0"
+               max="{{ $totalBateriasPrestadas }}"
+               class="w-full border rounded p-2">
+    </div>
+
+@endif
 
     <div class="mb-3">
     <label class="text-sm font-semibold">¿Quién devuelve la herramienta?</label>
@@ -608,16 +787,59 @@
             </select>
         </div>
 
-        <div class="space-y-2">
-            @foreach($herramientas as $herramienta)
-                <div class="flex items-center justify-between gap-2">
-                    <span>{{ $herramienta->nombre }} (Disponible: {{ $herramienta->cantidad_disponible }})</span>
-                    <input type="number" min="0" max="{{ $herramienta->cantidad_disponible }}"
-                           wire:model="prestamosMultiple.{{ $herramienta->id }}"
-                           class="w-20 border rounded px-2 py-1">
-                </div>
-            @endforeach
+       <div class="mb-4 p-3 bg-gray-50 rounded-lg border text-sm">
+    <span class="font-semibold">Stock actual de baterías:</span>
+    <span class="ml-2 font-bold">{{ $stockBaterias }}</span>
+</div>
+
+<div class="space-y-3 max-h-80 overflow-y-auto pr-2">
+
+@foreach($herramientas as $herramienta)
+
+    <div class="border rounded-lg p-3">
+
+        <div class="flex justify-between items-center mb-2">
+            <span class="font-semibold">
+                {{ $herramienta->nombre }}
+                <span class="text-sm text-gray-500">
+                    (Disponible: {{ $herramienta->cantidad_disponible }})
+                </span>
+            </span>
         </div>
+
+        <div class="flex gap-6 items-end">
+
+            {{-- Cantidad herramienta --}}
+            <div>
+                <label class="text-xs text-gray-500">Cantidad herramienta</label>
+                <input type="number"
+                       min="0"
+                       max="{{ $herramienta->cantidad_disponible }}"
+                       wire:model="prestamosMultiple.{{ $herramienta->id }}"
+                       class="w-20 border rounded px-2 py-1">
+            </div>
+
+            {{-- SOLO SI ES A BATERÍA --}}
+            @if($herramienta->tipo_alimentacion === 'bateria')
+                <div>
+                    <label class="text-xs text-gray-500">
+                        Baterías
+                    </label>
+                    <input type="number"
+                           min="0"
+                           max="{{ $stockBaterias }}"
+                           wire:model="bateriasMultiple.{{ $herramienta->id }}"
+                           class="w-24 border rounded px-2 py-1">
+                </div>
+            @endif
+
+        </div>
+
+    </div>
+
+@endforeach
+
+</div>
 
         <div class="flex justify-end gap-2 mt-4">
             <button wire:click="$set('mostrarModalPrestamoMultiple', false)" class="bg-gray-500 text-white px-4 py-2 rounded">Cancelar</button>
@@ -630,53 +852,146 @@
 @if($mostrarModalDevolucionMultiple)
 <div class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
     <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6">
-        <h2 class="text-lg font-bold mb-4">Devolución múltiple de herramientas</h2>
 
+        <h2 class="text-lg font-bold mb-4">
+            Devolución múltiple de herramientas
+        </h2>
+
+        {{-- FUNCIONARIO --}}
         <div class="mb-3">
-            <label>Funcionario</label>
-            <select wire:model.live="funcionarioMultipleId" class="w-full border rounded p-2">
+            <label class="block mb-1 text-sm font-medium">
+                Funcionario
+            </label>
+
+            <select wire:model.live="funcionarioMultipleId"
+                    class="w-full border rounded p-2">
                 <option value="">Seleccionar</option>
+
                 @foreach($funcionarios as $funcionario)
-                    <option value="{{ $funcionario->id }}">{{ $funcionario->nombre }} {{ $funcionario->apellido }}</option>
+                    <option value="{{ $funcionario->id }}">
+                        {{ $funcionario->nombre }} {{ $funcionario->apellido }}
+                    </option>
                 @endforeach
             </select>
         </div>
 
+        {{-- OBSERVACIONES --}}
         <div class="mb-3">
-            <label>Observaciones</label>
-            <textarea wire:model="observacionesMultiple" class="w-full border rounded p-2" rows="2"></textarea>
+            <label class="block mb-1 text-sm font-medium">
+                Observaciones
+            </label>
+
+            <textarea wire:model="observacionesMultiple"
+                      class="w-full border rounded p-2"
+                      rows="2">
+            </textarea>
         </div>
 
-        <div class="space-y-2">
+        <div class="space-y-3">
 
-    @if(!$funcionarioMultipleId)
-        <p class="text-gray-500 text-sm">
-            Selecciona un funcionario para ver sus herramientas prestadas.
-        </p>
-    @endif
+            {{-- SI NO HAY FUNCIONARIO --}}
+            @if(!$funcionarioMultipleId)
 
-    @foreach($prestamosFuncionarioSeleccionado as $prestamo)
-        <div class="flex items-center justify-between gap-2 border-b pb-2">
+                <p class="text-gray-500 text-sm">
+                    Selecciona un funcionario para ver sus herramientas prestadas.
+                </p>
 
-            <span>
-                {{ $prestamo->herramienta->nombre }}
-                (Prestado: {{ $prestamo->cantidad }})
-            </span>
+            @else
 
-            <input type="number"
-                   min="0"
-                   max="{{ $prestamo->cantidad }}"
-                   wire:model="devolucionesMultiple.{{ $prestamo->id }}"
-                   class="w-20 border rounded px-2 py-1">
+                {{-- SI NO TIENE PRÉSTAMOS --}}
+                @if($prestamosFuncionarioSeleccionado->isEmpty())
+
+                    <p class="text-gray-500 text-sm">
+                        Este funcionario no tiene herramientas prestadas.
+                    </p>
+
+                @else
+
+                    {{-- LISTADO --}}
+                    @foreach($prestamosFuncionarioSeleccionado as $prestamo)
+
+                        <div wire:key="prestamo-{{ $prestamo->id }}"
+                             class="border rounded p-3 space-y-2">
+
+                            {{-- INFO HERRAMIENTA --}}
+                            <div>
+                                <span class="font-semibold">
+                                    {{ $prestamo->herramienta->nombre }}
+                                </span>
+
+                                <div class="text-sm text-gray-500">
+                                    Herramientas prestadas:
+                                    {{ $prestamo->cantidad }}
+
+                                    @if(strtolower($prestamo->herramienta->tipo_alimentacion) == 'bateria')
+                                        | Baterías prestadas:
+                                        {{ $prestamo->cantidad_baterias }}
+                                    @endif
+                                </div>
+                            </div>
+
+                            {{-- CANTIDAD A DEVOLVER --}}
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm">
+                                    Cantidad a devolver
+                                </label>
+
+                                <input type="number"
+                                       min="0"
+                                       max="{{ $prestamo->cantidad }}"
+                                       wire:model="devolucionesMultiple.{{ $prestamo->id }}"
+                                       class="w-20 border rounded px-2 py-1">
+                            </div>
+
+                            {{-- BATERÍAS --}}
+                            @if(strtolower($prestamo->herramienta->tipo_alimentacion) == 'bateria')
+
+                                <div class="flex items-center justify-between">
+                                    <label class="text-sm">
+                                        Baterías a devolver
+                                        <span class="text-xs text-gray-500">
+                                            (Prestadas: {{ $prestamo->cantidad_baterias }})
+                                        </span>
+                                    </label>
+
+                                    <input type="number"
+                                           min="0"
+                                           max="{{ $prestamo->cantidad_baterias }}"
+                                           wire:model="bateriasDevolucionesMultiple.{{ $prestamo->id }}"
+                                           class="w-20 border rounded px-2 py-1">
+                                </div>
+
+                            @endif
+
+                        </div>
+
+                    @endforeach
+
+                @endif
+
+            @endif
+
         </div>
-    @endforeach
 
-</div>
-
+        {{-- BOTONES --}}
         <div class="flex justify-end gap-2 mt-4">
-            <button wire:click="$set('mostrarModalDevolucionMultiple', false)" class="bg-gray-500 text-white px-4 py-2 rounded">Cancelar</button>
-            <button wire:click="devolverHerramientasMultiple" class="bg-blue-600 text-white px-4 py-2 rounded">Devolver</button>
+
+            <button
+                wire:click="$set('mostrarModalDevolucionMultiple', false)"
+                class="bg-gray-500 text-white px-4 py-2 rounded">
+                Cancelar
+            </button>
+
+            @if($funcionarioMultipleId)
+                <button
+                    wire:click="devolverHerramientasMultiple"
+                    class="bg-blue-600 text-white px-4 py-2 rounded">
+                    Devolver
+                </button>
+            @endif
+
         </div>
+
     </div>
 </div>
 @endif
@@ -688,7 +1003,7 @@
 
         <div class="mb-3">
             <label class="text-sm font-semibold">Herramienta</label>
-            <select wire:model="herramientaPedidoId" class="w-full border rounded p-2">
+            <select wire:model.live="herramientaPedidoId" class="w-full border rounded p-2">
                 <option value="">Seleccionar</option>
                 @foreach($herramientas as $herramienta)
                     <option value="{{ $herramienta->id }}">{{ $herramienta->nombre }} (Disponible: {{ $herramienta->cantidad_disponible }})</option>
@@ -700,7 +1015,7 @@
             <label class="text-sm font-semibold">Cantidad</label>
             <input type="number" wire:model="cantidadPedido" class="w-full border rounded p-2" min="1">
         </div>
-
+          
         <div class="mb-3">
             <label class="text-sm font-semibold">Observación</label>
             <textarea wire:model="observacionPedido" class="w-full border rounded p-2" rows="2" placeholder="Opcional"></textarea>

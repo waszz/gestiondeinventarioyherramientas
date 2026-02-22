@@ -13,7 +13,9 @@ class Material extends Model
         'codigo_referencia',
         'stock_actual',
         'stock_minimo',
-        'material_esencial'
+        'material_esencial',
+        'gci_codigo',
+        'tipo_material_id',
     ];
 
     public function movimientos()
@@ -24,4 +26,10 @@ class Material extends Model
 {
     return $this->hasMany(Pedido::class, 'materiales_id');
 }
+
+    public function tipo()
+    {
+        return $this->belongsTo(TipoMaterial::class, 'tipo_material_id');
+    }
+
 }

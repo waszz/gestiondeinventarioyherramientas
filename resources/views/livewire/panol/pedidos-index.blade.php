@@ -124,14 +124,30 @@ $coloresEstado = [
 
     <input type="number" min="1" placeholder="Cantidad a pedir" wire:model="cantidadNuevo" class="w-full border p-2 rounded mb-2">
 
-    {{-- SOLO PARA MATERIAL NUEVO --}}
-    @if($tipoPedido === 'material_nuevo')
-        <input type="number"
-               min="0"
-               placeholder="Stock mínimo"
-               wire:model="stockMinimoNuevo"
-               class="w-full border p-2 rounded mb-2">
-    @endif
+<!-- SOLO PARA NUEVO GCI -->
+@if(in_array($tipoPedido, ['material_nuevo', 'herramienta_nueva']))
+    <input type="text"
+           placeholder="GCI"
+           wire:model="gciNuevo"
+           class="w-full border p-2 rounded mb-2">
+    @error('gciNuevo') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+@endif
+<!-- SOLO PARA NUEVA HERRAMIENTA -->
+@if($tipoPedido === 'herramienta_nueva')
+    <div class="mb-2">
+        <label class="block mb-1 font-semibold">Tipo de herramienta</label>
+        <select wire:model="tipoHerramientaNuevo" class="w-full border p-2 rounded">
+            <option value="">Seleccionar...</option>
+            <option value="cable">Cable</option>
+            <option value="bateria">Batería</option>
+            <option value="no_aplica">No aplica</option>
+        </select>
+        @error('tipoHerramientaNuevo') 
+            <span class="text-red-500 text-sm">{{ $message }}</span> 
+        @enderror
+    </div>
+@endif
+
 
     <input type="text" placeholder="SKU (opcional)" wire:model="skuNuevo" class="w-full border p-2 rounded">
 </div>

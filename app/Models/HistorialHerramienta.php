@@ -14,6 +14,7 @@ class HistorialHerramienta extends Model
         'codigo',
         'tipo',
         'cantidad',
+        'cantidad_baterias',
         'funcionario',
         'detalle',
         'observacion',

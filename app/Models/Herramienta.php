@@ -9,11 +9,15 @@ class Herramienta extends Model
     protected $fillable = [
         'nombre',
         'codigo',
-        'cantidad', // cantidad total
+        'gci_codigo',
+        'cantidad', 
         'estado',
         'cantidad_disponible',
         'cantidad_prestamo',
         'cantidad_fuera_servicio',
+        'tipo_alimentacion',
+        'baterias_stock',
+
     ];
 
     /**

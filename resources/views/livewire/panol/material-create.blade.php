@@ -28,6 +28,12 @@
                        class="w-full border rounded px-3 py-2">
             </div>
 
+            <div>
+                <labe class="block font-semibold">GCI Código</label>
+                <input type="text" wire:model="gci_codigo" class="w-full border rounded px-3 py-2">
+                @error('gci_codigo') <span class="text-danger">{{ $message }}</span> @enderror
+            </div>
+
             {{-- Cantidad inicial --}}
             <div>
                 <label class="block font-semibold">Cantidad Inicial</label>

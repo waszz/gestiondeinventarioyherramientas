@@ -34,6 +34,27 @@
             @error('cantidad') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
         </div>
 
+        <div>
+    <label class="block font-semibold">GCI Código</label>
+    <input type="text" wire:model="gci_codigo" placeholder="Ej: 12345"
+           class="w-full border rounded px-3 py-2">
+    @error('gci_codigo') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
+</div>
+
+        {{-- Tipo de alimentación --}}
+<div>
+    <label class="block font-semibold">Tipo de alimentación</label>
+    <select wire:model="tipo_alimentacion"
+            class="w-full border rounded px-3 py-2">
+        <option value="">-- No aplica --</option>
+        <option value="bateria">A batería</option>
+        <option value="cable">A cable</option>
+    </select>
+    @error('tipo_alimentacion') 
+        <span class="text-red-600 text-sm">{{ $message }}</span> 
+    @enderror
+</div>
+
         {{-- Botón --}}
         <button wire:click="guardar"
             class="bg-blue-600 text-white px-6 py-2 rounded font-semibold">

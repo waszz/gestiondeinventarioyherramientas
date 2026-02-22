@@ -43,6 +43,9 @@ class PedidosIndex extends Component
     // Listados existentes para selects
     public $herramientas;
     public $materiales;
+    public $gciNuevo;
+    public $gciPedidoHerramienta;
+    public $tipoHerramientaNuevo; 
     protected $listeners = ['refreshPepidos' => '$refresh'];
 
     
@@ -147,7 +150,7 @@ public function cambiarHistorial($tipo)
     }
 }
 
-    public function guardarPedidoHerramienta()
+   public function guardarPedidoHerramienta()
 {
     $this->validate([
         'herramientaPedidoId' => 'required|exists:herramientas,id',
@@ -161,7 +164,7 @@ public function cambiarHistorial($tipo)
         return;
     }
 
-    // Crear pedido
+    // Crear pedido usando el GCI de la herramienta
     Pedido::create([
         'tipo' => 'herramienta',
         'herramientas_id' => $herramienta->id,
@@ -171,7 +174,7 @@ public function cambiarHistorial($tipo)
         'cantidad' => $this->cantidadPedido,
         'estado' => 'pendiente',
         'observacion' => $this->observacionPedido,
-        'numero_seguimiento' => 'T-' . mt_rand(1000000000, 9999999999),
+        'numero_seguimiento' => $herramienta->gci_codigo, 
     ]);
 
     // Restar cantidad disponible
@@ -226,42 +229,47 @@ public function enviarMail()
     // =========================
 
     public function abrirModalCrear()
-    {
-        $this->reset([
-            'nombre',
-            'codigo',
-            'sku',
-            'numero_seguimiento',
-            'cantidad',
-            'tipo'
-        ]);
+{
+    $this->reset([
+        'nombre',
+        'codigo',
+        'sku',
+        'numero_seguimiento',
+        'cantidad',
+        'tipo',
+        'gciNuevo',
+    ]);
 
-        $this->cantidad = 1;
-        $this->tipo = 'material';
+    $this->cantidad = 1;
+    $this->tipo = 'material';
 
-        $this->mostrarModalCrear = true;
-    }
+    $this->mostrarModalCrear = true;
+}
 
   public function guardarPedido()
 {
   // Validaciones dinámicas
+
 if (in_array($this->tipoPedido, ['herramienta_nueva', 'material_nuevo'])) {
     $this->validate([
         'nombreNuevo' => 'required|string|max:255',
         'codigoNuevo' => 'nullable|string|max:255',
         'cantidadNuevo' => 'required|integer|min:1',
     ]);
-    
-    // 👇 SOLO si es material nuevo
+
+    // SOLO si es material nuevo
     if ($this->tipoPedido === 'material_nuevo') {
         $this->validate([
             'stockMinimoNuevo' => 'required|integer|min:0'
         ]);
     }
-} else {
-    $this->validate([
-        'cantidadNuevo' => 'required|integer|min:1',
-    ]);
+
+    // SOLO si es herramienta nueva -> validar tipo
+    if ($this->tipoPedido === 'herramienta_nueva') {
+        $this->validate([
+            'tipoHerramientaNuevo' => 'required|string|in:cable,bateria,no_aplica',
+        ]);
+    }
 }
     
 
@@ -270,7 +278,7 @@ if (in_array($this->tipoPedido, ['herramienta_nueva', 'material_nuevo'])) {
         'cantidad' => $this->cantidadNuevo,
         'estado' => 'pendiente',
         'sku' => $this->skuNuevo ?? null,
-        'numero_seguimiento' => $this->numero_seguimiento ?? null,
+        'numero_seguimiento' => $this->numero_seguimiento ?? null, 
     ];
 
     switch ($this->tipoPedido) {
@@ -281,35 +289,41 @@ if (in_array($this->tipoPedido, ['herramienta_nueva', 'material_nuevo'])) {
                 'nombre' => $herr->nombre,
                 'codigo' => $herr->codigo,
                 'herramientas_id' => $herr->id,
+                'numero_seguimiento' => $herr->gci_codigo, 
+                'tipo_alimentacion' => $herr->tipo_alimentacion,
             ]);
             break;
 
         case 'material_existente':
-            $mat = Material::findOrFail($this->materialSeleccionadoId);
-            $data = array_merge($data, [
-                'tipo' => 'material',
-                'nombre' => $mat->nombre,
-                'codigo' => $mat->codigo,
-                'materiales_id' => $mat->id,
-            ]);
-            break;
+    $mat = Material::findOrFail($this->materialSeleccionadoId);
+    $data = array_merge($data, [
+        'tipo' => 'material',
+        'nombre' => $mat->nombre,
+        'codigo' => $mat->codigo,
+        'materiales_id' => $mat->id,
+        'numero_seguimiento' => $mat->gci_codigo, // <- aquí
+    ]);
+    break;
 
         case 'herramienta_nueva':
             $data = array_merge($data, [
                 'tipo' => 'herramienta',
                 'nombre' => $this->nombreNuevo,
                 'codigo' => $this->codigoNuevo,
+                'numero_seguimiento' => $this->gciNuevo,
+                'tipo_alimentacion' => $this->tipoHerramientaNuevo,
             ]);
             break;
 
-        case 'material_nuevo':
-            $data = array_merge($data, [
-                'tipo' => 'material',
-                'nombre' => $this->nombreNuevo,
-                'codigo' => $this->codigoNuevo ?? 'N/A',
-                'stock_minimo' => $this->stockMinimoNuevo,
-            ]);
-            break;
+       case 'material_nuevo':
+    $data = array_merge($data, [
+        'tipo' => 'material',
+        'nombre' => $this->nombreNuevo,
+        'codigo' => $this->codigoNuevo ?? 'N/A',
+        'stock_minimo' => $this->stockMinimoNuevo,
+        'numero_seguimiento' => $this->gciNuevo,
+    ]);
+    break;
     }
 
     // Crear pedido
@@ -393,6 +407,7 @@ public function completarPedido($pedidoId)
                 'sku' => $pedido->sku,
                 'stock_actual' => $pedido->cantidad,
                 'stock_minimo' => $pedido->stock_minimo ?? 0,
+                'gci_codigo' => $pedido->numero_seguimiento,
                 
             ]);
 
@@ -422,6 +437,8 @@ public function completarPedido($pedidoId)
                 'sku' => $pedido->sku,
                 'cantidad' => $pedido->cantidad,
                 'cantidad_disponible' => $pedido->cantidad,
+                'gci_codigo' => $pedido->numero_seguimiento,
+                'tipo_alimentacion' => $pedido->tipo_alimentacion,
             ]);
 
             // Actualizar el pedido para vincular la nueva herramienta

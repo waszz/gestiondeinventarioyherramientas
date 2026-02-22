@@ -2,14 +2,16 @@
 
 namespace App\Livewire\Panol;
 
+use App\Models\Bateria;
 use App\Models\FueraServicio;
 use App\Models\Funcionario;
 use App\Models\Herramienta;
 use App\Models\HerramientaPrestamo;
 use App\Models\HistorialHerramienta;
 use App\Models\Pedido;
-use Livewire\Component;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\DB;
+use Livewire\Component;
 
 class HerramientasIndex extends Component
 {
@@ -58,9 +60,47 @@ class HerramientasIndex extends Component
     public $cantidadPedido;
     public $observacionPedido;
     public $skuPedido = null;
+    public $cantidadBateriasPrestamo = 0;
+    public $stockBaterias = 0;
+    public $nuevoStockBaterias;
+    public $bateriasMultiple = [];
+    public $cantidadBateriasDevolucion = 0;
+    public $bateriasDevolucionesMultiple = [];
+    public $mostrarPrestamosBaterias = [];
+    public $gciPedidoHerramienta;
     protected $listeners = ['refreshHerramientas' => '$refresh'];
 
 
+public function togglePrestamosBaterias($herramientaId)
+{
+    if (isset($this->mostrarPrestamosBaterias[$herramientaId])) {
+        unset($this->mostrarPrestamosBaterias[$herramientaId]);
+    } else {
+        $this->mostrarPrestamosBaterias[$herramientaId] = true;
+    }
+}
+
+ public function guardarStockBaterias()
+{
+    $bateria = Bateria::first();
+    if (!$bateria) {
+        session()->flash('error', 'No existe registro de baterías.');
+        return;
+    }
+
+    // Sumar o restar según el valor ingresado
+    $bateria->stock_total += $this->nuevoStockBaterias; // si es negativo, resta automáticamente
+    $bateria->save();
+
+    // Actualizar variable para la vista
+    $this->stockBaterias = $bateria->stock_total;
+
+    // Limpiar input
+    $this->nuevoStockBaterias = 0;
+
+    $this->dispatch('reload-page');
+    session()->flash('success', 'Stock de baterías actualizado correctamente.');
+}
 
     /*
     |---------------------------------------------------
@@ -296,7 +336,7 @@ Pedido::create([
     'tipo' => 'herramienta',                // <- igual que 'material' pero con herramienta
     'herramientas_id' => $herramienta->id,  // ID de la herramienta
     'nombre' => $herramienta->nombre,       // Nombre de la herramienta
-    'codigo' => $herramienta->codigo,       // Código de la herramienta
+    'codigo' => $herramienta->codigo,      // Código de la herramienta
     'sku' => $this->skuPedido,              // SKU que venís usando
     'cantidad' => $this->cantidadPedido,    // Cantidad pedida
     'estado' => 'pendiente',                // Estado inicial
@@ -312,6 +352,7 @@ public function abrirModalPedidoHerramienta(Herramienta $herramienta)
     $this->herramientaSeleccionada = $herramienta;
     $this->cantidadPedidoHerramienta = 1;
     $this->skuPedidoHerramienta = null;
+    $this->gciPedidoHerramienta = $herramienta->gci;
     $this->mostrarModalPedidoHerramienta = true;
     
 }
@@ -327,6 +368,7 @@ public function guardarPedidoHerramienta()
         'herramientas_id' => $this->herramientaSeleccionada->id,
         'nombre' => $this->herramientaSeleccionada->nombre,
         'codigo' => $this->herramientaSeleccionada->codigo,
+        'gci' => $this->gciPedidoHerramienta,
         'sku' => $this->skuPedidoHerramienta,
         'cantidad' => $this->cantidadPedidoHerramienta,
         'estado' => 'pendiente'
@@ -380,6 +422,7 @@ public function abrirModalPrestamoMultiple()
 public function abrirModalDevolucionMultiple()
 {
     $this->devolucionesMultiple = [];
+    $this->bateriasDevolucionesMultiple = [];
     $this->funcionarioMultipleId = null;
     $this->observacionesMultiple = '';
     $this->mostrarModalDevolucionMultiple = true;
@@ -393,103 +436,186 @@ public function prestarHerramientasMultiple()
         return;
     }
 
-    $funcionario = Funcionario::find($this->funcionario_id);
+    DB::transaction(function () {
 
-    foreach ($this->prestamosMultiple as $herramientaId => $cantidad) {
-        if ($cantidad <= 0) continue;
+        $funcionario = Funcionario::find($this->funcionario_id);
+        $bateria = Bateria::first();
 
-        $herramienta = Herramienta::find($herramientaId);
-        if (!$herramienta) continue;
+        // Contar baterías totales solicitadas
+        $totalBateriasSolicitadas = 0;
+        foreach ($this->prestamosMultiple as $herramientaId => $cantidad) {
+            $herramienta = Herramienta::find($herramientaId);
+            if (!$herramienta) continue;
 
-        if ($cantidad > $herramienta->cantidad_disponible) {
-            session()->flash('error', "No hay suficiente cantidad de {$herramienta->nombre}");
-            return;
+            if ($herramienta->tipo_alimentacion === 'bateria') {
+                $totalBateriasSolicitadas += $this->bateriasMultiple[$herramientaId] ?? 0;
+            }
         }
 
-        // Crear préstamo
-        HerramientaPrestamo::create([
-            'herramienta_id' => $herramienta->id,
-            'funcionario_id' => $this->funcionario_id,
-            'cantidad' => $cantidad,
-            'estado' => 'prestada',
-        ]);
+        // Verificar stock global de baterías
+        if ($bateria && $totalBateriasSolicitadas > $bateria->stock_total) {
+            throw new \Exception("No hay suficientes baterías disponibles para todas las herramientas a batería.");
+        }
 
-        // Actualizar stock
-        $herramienta->cantidad_disponible -= $cantidad;
-        $herramienta->cantidad_prestamo += $cantidad;
-        $herramienta->save();
+        // Procesar préstamos
+        foreach ($this->prestamosMultiple as $herramientaId => $cantidad) {
 
-        // 🔥 HISTORIAL
-        HistorialHerramienta::create([
-            'herramienta_id' => $herramienta->id,
-            'nombre' => $herramienta->nombre,
-            'codigo' => $herramienta->codigo,
-            'tipo' => 'prestamo_multiple',
-            'cantidad' => $cantidad,
-            'funcionario' => $funcionario?->nombre . ' ' . $funcionario?->apellido,
-            'detalle' => 'Préstamo múltiple',
-            'observacion' => null,
-        ]);
-    }
+            if ($cantidad <= 0) continue;
+
+            $herramienta = Herramienta::find($herramientaId);
+            if (!$herramienta) continue;
+
+            if ($cantidad > $herramienta->cantidad_disponible) {
+                throw new \Exception("No hay suficiente cantidad de {$herramienta->nombre}");
+            }
+
+            $cantidadBaterias = 0;
+
+            // Si la herramienta es a batería
+            if ($herramienta->tipo_alimentacion === 'bateria') {
+                $cantidadBaterias = $this->bateriasMultiple[$herramientaId] ?? 0;
+
+                if ($cantidadBaterias > 0 && $bateria) {
+                    $bateria->decrement('stock_total', $cantidadBaterias);
+                }
+            }
+
+            // Crear préstamo
+            HerramientaPrestamo::create([
+                'herramienta_id' => $herramienta->id,
+                'funcionario_id' => $this->funcionario_id,
+                'cantidad' => $cantidad,
+                'cantidad_baterias' => $cantidadBaterias,
+                'estado' => 'prestada',
+            ]);
+
+            // Actualizar herramienta
+            $herramienta->decrement('cantidad_disponible', $cantidad);
+            $herramienta->increment('cantidad_prestamo', $cantidad);
+
+            // Historial
+            HistorialHerramienta::create([
+                'herramienta_id' => $herramienta->id,
+                'nombre' => $herramienta->nombre,
+                'codigo' => $herramienta->codigo,
+                'tipo' => 'prestamo_multiple',
+                'cantidad' => $cantidad,
+                'cantidad_baterias' => $cantidadBaterias,
+                'funcionario' => $funcionario?->nombre . ' ' . $funcionario?->apellido,
+                'detalle' => 'Préstamo múltiple',
+                'observacion' => null,
+            ]);
+        }
+
+    });
 
     $this->mostrarModalPrestamoMultiple = false;
     $this->dispatch('reload-page');
     session()->flash('success', 'Préstamos múltiples realizados correctamente');
 }
-
 // Guardar devolución múltiple
 public function devolverHerramientasMultiple()
 {
-    if (!$this->funcionarioMultipleId) {
-        session()->flash('error', 'Debes seleccionar un funcionario');
-        return;
-    }
-
     $funcionario = Funcionario::find($this->funcionarioMultipleId);
 
-    foreach ($this->devolucionesMultiple as $prestamoId => $cantidad) {
-        if ($cantidad <= 0) continue;
+    foreach ($this->devolucionesMultiple as $prestamoId => $cantidadHerramientas) {
 
-        $prestamo = HerramientaPrestamo::find($prestamoId);
-        if (!$prestamo || $prestamo->estado != 'prestada') continue;
+        $prestamo = HerramientaPrestamo::with('herramienta')->find($prestamoId);
+        if (!$prestamo) continue;
 
-        // Cantidad real que se devuelve
-        $cantidadDevuelta = $cantidad;
+        $herramienta = $prestamo->herramienta;
 
-        if ($cantidad >= $prestamo->cantidad) {
-            $cantidadDevuelta = $prestamo->cantidad;
-            $prestamo->cantidad = 0;
+        $cantidadBaterias = $this->bateriasDevolucionesMultiple[$prestamoId] ?? 0;
+
+        //  Si no devuelve nada, saltar
+        if ($cantidadHerramientas <= 0 && $cantidadBaterias <= 0) {
+            continue;
+        }
+
+        /*
+        ==========================================
+        DEVOLVER HERRAMIENTAS
+        ==========================================
+        */
+        $cantidadDevuelta = min($cantidadHerramientas, $prestamo->cantidad);
+
+        if ($cantidadDevuelta > 0) {
+
+            $prestamo->cantidad -= $cantidadDevuelta;
+
+            // Actualizar stock herramienta
+            $herramienta->increment('cantidad_disponible', $cantidadDevuelta);
+            $herramienta->decrement('cantidad_prestamo', $cantidadDevuelta);
+
+            // Historial
+            HistorialHerramienta::create([
+                'herramienta_id' => $herramienta->id,
+                'nombre' => $herramienta->nombre,
+                'codigo' => $herramienta->codigo,
+                'tipo' => 'devolucion_multiple',
+                'cantidad' => $cantidadDevuelta,
+                'funcionario' => $funcionario?->nombre . ' ' . $funcionario?->apellido,
+                'detalle' => 'Devolución múltiple de herramienta',
+                'observacion' => $this->observacionesMultiple,
+            ]);
+        }
+
+        /*
+        ==========================================
+        DEVOLVER BATERÍAS
+        ==========================================
+        */
+        if ($herramienta->tipo_alimentacion === 'bateria') {
+
+            $bateria = Bateria::first();
+
+            if ($bateria && $cantidadBaterias > 0) {
+
+                $cantidadBaterias = min(
+                    $cantidadBaterias,
+                    $prestamo->cantidad_baterias
+                );
+
+                $prestamo->cantidad_baterias -= $cantidadBaterias;
+
+                $bateria->increment('stock_total', $cantidadBaterias);
+            }
+        }
+
+        /*
+        ==========================================
+        CERRAR PRÉSTAMO SOLO SI NO QUEDA NADA
+        ==========================================
+        */
+        if (
+            $prestamo->cantidad <= 0 &&
+            $prestamo->cantidad_baterias <= 0
+        ) {
             $prestamo->estado = 'devuelta';
         } else {
-            $prestamo->cantidad -= $cantidad;
+            $prestamo->estado = 'prestada';
         }
 
         $prestamo->observaciones = $this->observacionesMultiple;
         $prestamo->save();
-
-        $herramienta = $prestamo->herramienta;
-
-        $herramienta->cantidad_disponible += $cantidadDevuelta;
-        $herramienta->cantidad_prestamo -= $cantidadDevuelta;
-        $herramienta->save();
-
-        // HISTORIAL
-        HistorialHerramienta::create([
-            'herramienta_id' => $herramienta->id,
-            'nombre' => $herramienta->nombre,
-            'codigo' => $herramienta->codigo,
-            'tipo' => 'devolucion_multiple',
-            'cantidad' => $cantidadDevuelta,
-            'funcionario' => $funcionario?->nombre . ' ' . $funcionario?->apellido,
-            'detalle' => 'Devolución múltiple de herramienta',
-            'observacion' => $this->observacionesMultiple,
-        ]);
     }
+// 🔄 Refrescar lista del funcionario
+$this->updatedFuncionarioMultipleId();
 
-    $this->mostrarModalDevolucionMultiple = false;
-    $this->dispatch('reload-page');
-    session()->flash('success', 'Devoluciones múltiples realizadas correctamente');
+// Cerrar modal y resetear campos
+$this->mostrarModalDevolucionMultiple = false;
+$this->funcionarioMultipleId = null;
+$this->devolucionesMultiple = [];
+$this->bateriasDevolucionesMultiple = [];
+$this->observacionesMultiple = '';
+
+// Refrescar página (si querés)
+$this->dispatch('reload-page');
+
+// Mensaje de éxito
+session()->flash('success', 'Devolución múltiple realizada correctamente.');
 }
+
 
 
 public function obtenerEstadisticasHerramientas()
@@ -532,30 +658,45 @@ public function obtenerEstadisticasHerramientas()
 
 public function updatedFuncionarioMultipleId()
 {
+    // Reset si no hay funcionario
     if (!$this->funcionarioMultipleId) {
         $this->prestamosFuncionarioSeleccionado = [];
         $this->devolucionesMultiple = [];
+        $this->bateriasDevolucionesMultiple = [];
         return;
     }
 
-    $prestamos = HerramientaPrestamo::query()
-    ->where('funcionario_id', $this->funcionarioMultipleId)
-    ->where('estado', 'prestada')
-    ->with([
-        'herramienta:id,nombre'
-    ])
-    ->get();
-
+    // Traer préstamos activos (cantidad > 0 o cantidad_baterias > 0)
+    $prestamos = HerramientaPrestamo::with('herramienta')
+        ->where('funcionario_id', $this->funcionarioMultipleId)
+        ->where(function($q){
+            $q->where('cantidad', '>', 0)
+              ->orWhere('cantidad_baterias', '>', 0);
+        })
+        ->get();
 
     $this->prestamosFuncionarioSeleccionado = $prestamos;
 
-    // inicializar inputs en 0
+    // Reset arrays de inputs
     $this->devolucionesMultiple = [];
+    $this->bateriasDevolucionesMultiple = [];
+
     foreach ($prestamos as $prestamo) {
-        $this->devolucionesMultiple[$prestamo->id] = 0;
+
+        // Solo agregar si queda cantidad de herramientas
+        if ($prestamo->cantidad > 0) {
+            $this->devolucionesMultiple[$prestamo->id] = 0;
+        }
+
+        // Solo agregar si tipo batería y quedan baterías prestadas
+        if (
+            strtolower($prestamo->herramienta->tipo_alimentacion) === 'bateria' &&
+            $prestamo->cantidad_baterias > 0
+        ) {
+            $this->bateriasDevolucionesMultiple[$prestamo->id] = 0;
+        }
     }
 }
-
     // Abrir modal
 public function abrirModalEditar(Herramienta $herramienta)
 {
@@ -625,9 +766,10 @@ public function togglePrestamos($herramientaId)
     }
 }
 
-   public function prestarHerramienta()
+public function prestarHerramienta()
 {
     $cantidad = $this->cantidadPrestamo;
+    $cantidadBaterias = $this->cantidadBateriasPrestamo; // ← guardar copia
 
     if (!$this->funcionario_id) {
         session()->flash('error', 'Debes seleccionar un funcionario');
@@ -639,33 +781,54 @@ public function togglePrestamos($herramientaId)
         return;
     }
 
-    // Registrar préstamo
+    if ($this->herramientaSeleccionada->tipo_alimentacion === 'bateria') {
+
+        $bateria = Bateria::first();
+
+        if (!$bateria) {
+            session()->flash('error', 'No existe registro de baterías.');
+            return;
+        }
+
+        if ($cantidadBaterias > $bateria->stock_total) {
+            session()->flash('error', 'No hay suficientes baterías disponibles.');
+            return;
+        }
+
+        $bateria->decrement('stock_total', $cantidadBaterias);
+    }
+
+    // Crear préstamo
     HerramientaPrestamo::create([
         'herramienta_id' => $this->herramientaSeleccionada->id,
         'funcionario_id' => $this->funcionario_id,
         'cantidad' => $cantidad,
+        'cantidad_baterias' => $cantidadBaterias,
         'estado' => 'prestada',
     ]);
 
-    // Actualizar cantidades
+    // Actualizar stock herramienta
     $this->herramientaSeleccionada->cantidad_disponible -= $cantidad;
     $this->herramientaSeleccionada->cantidad_prestamo += $cantidad;
     $this->herramientaSeleccionada->save();
 
-        // 🔥 GUARDAR HISTORIAL
     $funcionario = Funcionario::find($this->funcionario_id);
 
+    // 🔥 HISTORIAL CORRECTO
     HistorialHerramienta::create([
         'herramienta_id' => $this->herramientaSeleccionada->id,
         'nombre' => $this->herramientaSeleccionada->nombre,
         'codigo' => $this->herramientaSeleccionada->codigo,
         'tipo' => 'prestamo',
         'cantidad' => $cantidad,
+        'cantidad_baterias' => $cantidadBaterias,
         'funcionario' => $funcionario?->nombre . ' ' . $funcionario?->apellido,
         'detalle' => 'Préstamo individual',
         'observacion' => null,
     ]);
 
+    // recién acá reseteás
+    $this->cantidadBateriasPrestamo = 0;
 
     $this->mostrarModalPrestamo = false;
     $this->dispatch('reload-page');
@@ -677,6 +840,7 @@ public function togglePrestamos($herramientaId)
 {
     $this->herramientaSeleccionada = $herramienta;
     $this->cantidadPrestamo = 1; // por defecto
+    $this->cantidadBateriasDevolucion = 0;
     $this->funcionarioPrestamoId = null;
     $this->observacionesDevolucion = '';
     $this->mostrarModalDevolver = true;
@@ -691,65 +855,95 @@ public function devolverHerramienta()
         return;
     }
 
-    // Convertir IDs a array
     $prestamoIds = explode(',', $this->funcionarioPrestamoId);
-
     $cantidadADevolver = $this->cantidadPrestamo;
+    $cantidadBateriasADevolver = $this->cantidadBateriasDevolucion;
 
-    // Traer los préstamos activos
-    $prestamos = HerramientaPrestamo::whereIn('id', $prestamoIds)
+    $prestamos = HerramientaPrestamo::with('herramienta')
+        ->whereIn('id', $prestamoIds)
         ->where('estado', 'prestada')
         ->orderBy('created_at')
         ->get();
 
+    $funcionario = Funcionario::find($prestamos->first()?->funcionario_id);
+
+    $bateria = Bateria::first();
+
     foreach ($prestamos as $prestamo) {
 
-        if ($cantidadADevolver <= 0) break;
+        // -----------------------------
+        // Devolver herramientas
+        // -----------------------------
+        if ($cantidadADevolver > 0 && $prestamo->cantidad > 0) {
+            $cantidadDevuelta = min($cantidadADevolver, $prestamo->cantidad);
+            $prestamo->cantidad -= $cantidadDevuelta;
+            $cantidadADevolver -= $cantidadDevuelta;
 
-        if ($cantidadADevolver >= $prestamo->cantidad) {
-            $cantidadDevuelta = $prestamo->cantidad;
-            $cantidadADevolver -= $prestamo->cantidad;
-            $prestamo->cantidad = 0;
-            $prestamo->estado = 'devuelta';
-        } else {
-            $cantidadDevuelta = $cantidadADevolver;
-            $prestamo->cantidad -= $cantidadADevolver;
-            $cantidadADevolver = 0;
+            $prestamo->estado = ($prestamo->cantidad + $prestamo->cantidad_baterias <= 0) ? 'devuelta' : 'prestada';
+
+            // Actualizar stock herramienta
+            $prestamo->herramienta->increment('cantidad_disponible', $cantidadDevuelta);
+            $prestamo->herramienta->decrement('cantidad_prestamo', $cantidadDevuelta);
+
+            // Historial herramienta
+            HistorialHerramienta::create([
+                'herramienta_id' => $prestamo->herramienta_id,
+                'nombre' => $prestamo->herramienta->nombre,
+                'codigo' => $prestamo->herramienta->codigo,
+                'tipo' => 'devolucion',
+                'cantidad' => $cantidadDevuelta,
+                'cantidad_baterias' => 0,
+                'funcionario' => $funcionario?->nombre . ' ' . $funcionario?->apellido,
+                'detalle' => 'Devolución herramienta',
+                'observacion' => $this->observacionesDevolucion,
+            ]);
         }
 
+        // -----------------------------
+        // Devolver baterías dentro del mismo préstamo
+        // -----------------------------
+        if ($cantidadBateriasADevolver > 0 && $prestamo->herramienta->tipo_alimentacion === 'bateria' && $prestamo->cantidad_baterias > 0) {
+            $cantidadBateriasDevuelta = min($cantidadBateriasADevolver, $prestamo->cantidad_baterias);
+            $prestamo->cantidad_baterias -= $cantidadBateriasDevuelta;
+            $cantidadBateriasADevolver -= $cantidadBateriasDevuelta;
+
+            // Actualizar stock global de baterías
+            if ($bateria) {
+                $bateria->increment('stock_total', $cantidadBateriasDevuelta);
+            }
+
+            // Historial batería
+            HistorialHerramienta::create([
+                'herramienta_id' => $prestamo->herramienta_id,
+                'nombre' => $prestamo->herramienta->nombre,
+                'codigo' => $prestamo->herramienta->codigo,
+                'tipo' => 'devolucion',
+                'cantidad' => 0,
+                'cantidad_baterias' => $cantidadBateriasDevuelta,
+                'funcionario' => $funcionario?->nombre . ' ' . $funcionario?->apellido,
+                'detalle' => 'Devolución batería',
+                'observacion' => $this->observacionesDevolucion,
+            ]);
+
+            // Actualizar estado del préstamo original
+            $prestamo->estado = ($prestamo->cantidad + $prestamo->cantidad_baterias <= 0) ? 'devuelta' : 'prestada';
+        }
+
+        // Guardar observaciones del préstamo original
         $prestamo->observaciones = $this->observacionesDevolucion;
         $prestamo->save();
-
-        // 🔥 HISTORIAL POR CADA DEVOLUCIÓN
-        $funcionario = Funcionario::find($prestamo->funcionario_id);
-
-        HistorialHerramienta::create([
-            'herramienta_id' => $prestamo->herramienta_id,
-            'nombre' => $prestamo->herramienta->nombre,
-            'codigo' => $prestamo->herramienta->codigo,
-            'tipo' => 'devolucion',
-            'cantidad' => $cantidadDevuelta,
-            'funcionario' => $funcionario?->nombre . ' ' . $funcionario?->apellido,
-            'detalle' => 'Devolución individual',
-            'observacion' => $this->observacionesDevolucion,
-        ]);
     }
 
-    // Actualizar cantidades
-    $this->herramientaSeleccionada->cantidad_disponible += $this->cantidadPrestamo;
-    $this->herramientaSeleccionada->cantidad_prestamo -= $this->cantidadPrestamo;
-    $this->herramientaSeleccionada->save();
-
+    // Reset y cerrar modal
     $this->mostrarModalDevolver = false;
     $this->cantidadPrestamo = 1;
     $this->funcionarioPrestamoId = null;
+    $this->cantidadBateriasDevolucion = 0;
     $this->observacionesDevolucion = null;
 
     $this->dispatch('reload-page');
-    session()->flash('success', 'Herramienta devuelta correctamente');
+    session()->flash('success', 'Herramienta y/o batería devuelta correctamente');
 }
-
-
     // Abrir modal fuera de servicio
    public function abrirModalFueraServicio(Herramienta $herramienta)
 {
@@ -944,6 +1138,7 @@ $pedidosHerramientas = Pedido::where('tipo', 'herramienta')
     ->with('herramienta')
     ->orderByDesc('created_at')
     ->get();
+$this->stockBaterias = Bateria::first()?->stock_total ?? 0;
 
 return view('livewire.panol.herramientas-index', compact(
     'herramientas',

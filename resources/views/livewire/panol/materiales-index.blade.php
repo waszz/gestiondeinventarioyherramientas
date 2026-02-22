@@ -49,13 +49,27 @@
         class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-4 py-2 mb-4 rounded-lg">
     Exportar Materiales a CSV
 </button>
-<button wire:click="exportarMaterialesPdf"
-    class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-4 py-2 rounded-lg">
+
+<a href="{{ route('materiales.exportar.pdf') }}" class="btn btn-danger bg-gray-500 hover:bg-gray-600 text-white font-bold px-4 py-2 rounded-lg">
     Exportar Materiales a PDF
-</button>
+</a>
+
+<div class="flex items-center gap-2">
+    <input type="file" wire:model="archivoImportacion" 
+           class="border p-2 rounded">
+
+    <button wire:click="importarMateriales"
+            class="bg-gray-500 text-white px-4 py-2 rounded-lg">
+        Importar Materiales desde Excel
+    </button>
+</div>
+
+@error('archivoImportacion') 
+    <span class="text-red-500">{{ $message }}</span> 
+@enderror
 
     {{-- Buscador --}}
-    <div class="mb-4">
+    <div class="mb-4 mt-4">
         <input type="text"
                wire:model.live="buscar"
                placeholder="Buscar material o código..."
@@ -70,7 +84,9 @@
             <thead class="bg-gray-100 dark:bg-gray-700">
                 <tr>
                     <th class="text-left p-3">Material</th>
+                    <th class="text-left p-3">Tipo Material</th>
                     <th class="text-left p-3">Código</th>
+                    <th class="text-left p-3">GCI Código</th>
                     <th class="text-center p-3">Stock</th>
                     <th class="text-center p-3">Stock mínimo</th>
                     <th class="text-center p-3">Esencial</th>
@@ -83,7 +99,20 @@
                 @forelse($materiales as $material)
                     <tr wire:key="material-{{ $material->id }}" class="border-b">
                         <td class="p-3 font-semibold">{{ $material->nombre }}</td>
+                        <td class="p-3">
+                            <select 
+                                wire:change="cambiarTipoMaterial({{ $material->id }}, $event.target.value)"
+                                class="border rounded px-2 py-1 text-sm w-full"
+                            >
+                                @foreach($tiposMateriales as $tipo)
+                                    <option value="{{ $tipo }}" {{ optional($material->tipo)->nombre === $tipo ? 'selected' : '' }}>
+                                        {{ $tipo }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </td>
                         <td class="p-3">{{ $material->codigo_referencia }}</td>
+                        <td class="p-3">{{ $material->gci_codigo ?? '---' }}</td>
                         <td class="p-3 text-center">{{ $material->stock_actual }}</td>
                         <td class="p-3 text-center">{{ $material->stock_minimo }}</td>
                         <td class="p-3 text-center">
@@ -147,7 +176,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="text-center p-6 text-gray-500">
+                        <td colspan="9" class="text-center p-6 text-gray-500">
                             No hay materiales cargados
                         </td>
                     </tr>
@@ -476,10 +505,9 @@
         Exportar Historial a CSV
     </button>
 
-    <button wire:click="exportarHistorialPdf"
-        class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-4 py-2 rounded-lg">
-        Exportar Historial a PDF
-    </button>
+<a href="{{ route('historial.exportar') }}" class="btn btn-danger bg-gray-500 hover:bg-gray-600 text-white font-bold px-4 py-2 rounded-lg">
+    Exportar Materiales a PDF
+</a>
 </div>
 
             {{-- Tabla de movimientos --}}

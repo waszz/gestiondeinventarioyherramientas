@@ -3,7 +3,9 @@
 
 use App\Http\Controllers\ComentarioController;
 use App\Http\Controllers\DonacionController;
+use App\Http\Controllers\ExportController;
 use App\Http\Controllers\FoooterController;
+use App\Http\Controllers\HistorialController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MercadoPagoController;
 use App\Http\Controllers\NoticiasController;
@@ -20,7 +22,6 @@ use App\Livewire\EditarPlanilla;
 use App\Livewire\FuncionarioEdit;
 use App\Livewire\Funcionarios;
 use App\Livewire\GenerarPlanilla;
-
 use App\Livewire\Licencias;
 use App\Livewire\Panol\HerramientaCreate;
 use App\Livewire\Panol\HerramientasIndex;
@@ -35,6 +36,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;;
 use Illuminate\Support\Facades\Route;
+
 
 Route::get('/', HomeController::class)->name('home');
 
@@ -204,3 +206,10 @@ Route::get('/panol/herramienta/crear', HerramientaCreate::class)
    // Mostrar PDF en navegador
 Route::get('/reportes/pdf/{tipo}', [ReporteController::class, 'mostrarPDF'])
     ->name('reportes.pdf');
+
+Route::get('/exportar-materiales-pdf', [ExportController::class, 'materialesPdf'])
+    ->name('materiales.exportar.pdf');
+
+
+Route::get('/historial/exportar', [HistorialController::class, 'exportar'])
+    ->name('historial.exportar');

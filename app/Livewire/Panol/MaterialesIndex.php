@@ -2,15 +2,21 @@
 
 namespace App\Livewire\Panol;
 
+use App\Imports\MaterialesImport;
 use App\Models\Funcionario;
 use App\Models\Material;
 use App\Models\MovimientoMaterial;
 use App\Models\Pedido;
-use Livewire\Component;
+use App\Models\TipoMaterial;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Livewire\Component;
+use Livewire\WithFileUploads;
+use Maatwebsite\Excel\Facades\Excel;
+
 
 class MaterialesIndex extends Component
 {
+    use WithFileUploads; 
     public $buscar = '';
 
     public $materialAEliminar = null;
@@ -49,8 +55,66 @@ class MaterialesIndex extends Component
     public $skuPedido;
     public $materialTienePedidoPendiente = false;
     public $hayStockBajo = false;
+    public $archivoImportacion;
+    public $tiposMateriales = ['Eléctrico','Sanitario','Herrería','Construcción','Servicios','Otros'];
     protected $listeners = ['refreshMaterial' => '$refresh'];
 
+
+
+public function cambiarTipoMaterial($materialId, $nuevoTipo)
+{
+    $material = Material::find($materialId);
+    if (!$material) return;
+
+    // Buscar o crear el tipo
+    $tipo = TipoMaterial::firstOrCreate(['nombre' => $nuevoTipo]);
+
+    // Actualizar el material
+    $material->tipo_material_id = $tipo->id;
+    $material->save();
+
+    session()->flash('success', 'Tipo de material actualizado correctamente.');
+}
+
+private function detectarTipo($nombreMaterial)
+{
+    $nombre = strtolower($nombreMaterial);
+
+    if (str_contains($nombre, 'cable') || str_contains($nombre, 'enchufe') || str_contains($nombre, 'llave termica')) {
+        return TipoMaterial::firstOrCreate(['nombre' => 'Eléctrico']);
+    }
+
+    if (str_contains($nombre, 'caño') || str_contains($nombre, 'valvula') || str_contains($nombre, 'griferia')) {
+        return TipoMaterial::firstOrCreate(['nombre' => 'Sanitario']);
+    }
+
+    if (str_contains($nombre, 'arena') || str_contains($nombre, 'cemento')) {
+        return TipoMaterial::firstOrCreate(['nombre' => 'Construcción']);
+    }
+
+    return null; // Si no se detecta
+}
+    
+    /*
+    |---------------------------------------------------
+    | IMPORTAR COMO CSV, XLSX
+    |---------------------------------------------------
+    */
+
+    public function importarMateriales()
+    {
+        $this->validate([
+            'archivoImportacion' => 'required|file|mimes:csv,xlsx'
+        ]);
+
+        Excel::import(new MaterialesImport, $this->archivoImportacion);
+
+        $this->reset('archivoImportacion');
+
+        session()->flash('success', 'Materiales importados correctamente.');
+
+        $this->dispatch('reload-page');
+    }
 
 
     /*
@@ -178,11 +242,12 @@ public function exportarHistorialCsv()
         // BOM UTF-8 para Excel
         fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
 
-        // Encabezados
+        // ✅ Encabezados
         fputcsv($file, [
             'Fecha',
             'Material',
             'Código',
+            'GCI Código',
             'Tipo',
             'Cantidad',
             'Destino',
@@ -196,10 +261,14 @@ public function exportarHistorialCsv()
                 $mov->created_at->format('d/m/Y H:i'),
                 $mov->material->nombre ?? '',
                 $mov->material->codigo_referencia ?? '',
+                $mov->material->gci_codigo ?? '',
                 $mov->tipo,
                 $mov->cantidad,
                 $mov->destino,
-                optional($mov->funcionario)->nombre . ' ' . optional($mov->funcionario)->apellido,
+                trim(
+                    (optional($mov->funcionario)->nombre ?? '') . ' ' .
+                    (optional($mov->funcionario)->apellido ?? '')
+                ),
                 $mov->ticket,
                 $mov->usuario
             ], ';');
@@ -229,24 +298,26 @@ public function exportarCsv()
 
         $file = fopen('php://output', 'w');
 
-        // BOM para que Excel reconozca UTF-8 y muestre bien acentos
+        // BOM UTF-8 para Excel
         fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
 
-        // Encabezados (separados por ;)
+        // ✅ Encabezados
         fputcsv($file, [
             'Nombre',
             'Código',
+            'GCI Código', 
             'Stock Actual',
             'Stock Mínimo',
             'Esencial',
             'Estado'
         ], ';');
 
-        // Filas
+        // ✅ Filas
         foreach ($materiales as $material) {
             fputcsv($file, [
                 $material->nombre,
                 $material->codigo_referencia,
+                $material->gci_codigo ?? '', 
                 $material->stock_actual,
                 $material->stock_minimo,
                 $material->material_esencial ? 'Sí' : 'No',
@@ -287,20 +358,20 @@ public function guardarPedidoMaterial()
     ]);
 
     $material = Material::find($this->materialPedidoId);
-
-    if(!$material) return;
+    if (!$material) return;
 
     Pedido::create([
         'tipo' => 'material',
         'materiales_id' => $material->id,
         'nombre' => $material->nombre,
         'codigo' => $material->codigo_referencia,
-        'sku' => $this->skuPedido,
         'cantidad' => $this->cantidadPedido,
-        'estado' => 'pendiente'
+        'estado' => 'pendiente',
+        'sku' => $this->skuPedido,
+        'numero_seguimiento' => $material->gci_codigo ?? 'N/A', // <-- acá usamos el GCI
     ]);
 
-      $this->materialTienePedidoPendiente = true;
+    $this->materialTienePedidoPendiente = true;
     $this->mostrarModalPedido = false;
 
     $this->dispatch('reload-page');
@@ -632,14 +703,25 @@ public function getEstadisticasMasConsumidosProperty()
 public function render()
 {
     //Tabla de materiales
-    $materiales = Material::query()
-        ->when($this->buscar, fn($q) =>
-            $q->where('nombre', 'like', '%'.$this->buscar.'%')
-              ->orWhere('codigo_referencia', 'like', '%'.$this->buscar.'%')
-        )
-        ->orderBy('nombre')
-        ->get();
-
+ $materiales = Material::query()
+    ->when($this->buscar, function($q) {
+        $q->where(function($q2) {
+            $q2->where('nombre', 'like', '%'.$this->buscar.'%')
+               ->orWhere('codigo_referencia', 'like', '%'.$this->buscar.'%')
+               ->orWhereHas('tipo', function($q3) {
+                   $q3->whereIn('nombre', [
+                       'Eléctrico',
+                       'Sanitario',
+                       'Herrería',
+                       'Otros',
+                       'Servicios',
+                       'Herramientas'
+                   ])->where('nombre', 'like', '%'.$this->buscar.'%');
+               });
+        });
+    })
+    ->orderBy('nombre')
+    ->get();
         $this->hayStockBajo = Material::whereColumn('stock_actual', '<=', 'stock_minimo')->exists();
 
     // Movimientos filtrados
