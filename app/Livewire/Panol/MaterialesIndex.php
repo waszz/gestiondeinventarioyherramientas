@@ -14,6 +14,7 @@ use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
 
 
+
 class MaterialesIndex extends Component
 {
     use WithFileUploads; 
@@ -56,7 +57,14 @@ class MaterialesIndex extends Component
     public $materialTienePedidoPendiente = false;
     public $hayStockBajo = false;
     public $archivoImportacion;
-    public $tiposMateriales = ['Eléctrico','Sanitario','Herrería','Construcción','Servicios','Otros'];
+    public $tiposMateriales = ['Eléctrico','Sanitario','Herrería','Construcción','Servicios','Otros', 'Herramientas'];
+    public $columnasDetectadas = [];
+    public $columnaNombre;
+    public $columnaGci;
+    public $columnaStock;
+    public $columnaStockMinimo;
+    public $mostrarConfiguracion = false;
+    public $filtroEstado; // 'critico' o 'optimo' o null
     protected $listeners = ['refreshMaterial' => '$refresh'];
 
 
@@ -73,6 +81,9 @@ public function cambiarTipoMaterial($materialId, $nuevoTipo)
     $material->tipo_material_id = $tipo->id;
     $material->save();
 
+    // Recargar la relación para Livewire
+    $material->load('tipo');
+    
     session()->flash('success', 'Tipo de material actualizado correctamente.');
 }
 
@@ -101,21 +112,65 @@ private function detectarTipo($nombreMaterial)
     |---------------------------------------------------
     */
 
-    public function importarMateriales()
-    {
-        $this->validate([
-            'archivoImportacion' => 'required|file|mimes:csv,xlsx'
-        ]);
+    public function updatedArchivoImportacion()
+{
+    $data = Excel::toArray([], $this->archivoImportacion);
 
-        Excel::import(new MaterialesImport, $this->archivoImportacion);
+    if (!isset($data[0][0])) return;
 
-        $this->reset('archivoImportacion');
+    $this->columnasDetectadas = array_keys($data[0][0]);
+}
 
-        session()->flash('success', 'Materiales importados correctamente.');
 
-        $this->dispatch('reload-page');
+
+public function importarMateriales()
+{
+    $this->resetErrorBag();
+
+    $columnas = [
+        'columnaNombre'      => $this->columnaNombre,
+        'columnaGci'         => $this->columnaGci,
+        'columnaStock'       => $this->columnaStock,
+        'columnaStockMinimo' => $this->columnaStockMinimo,
+    ];
+
+    // 1. Validaciones de archivos y campos requeridos
+    $this->validate([
+        'archivoImportacion' => 'required|file|mimes:csv,xlsx',
+        'columnaNombre'      => 'required',
+    ]);
+
+    // 2. Lógica de duplicados (permitiendo el índice 0)
+    $filtrados = array_filter($columnas, function($valor) {
+        return $valor !== null && $valor !== '';
+    });
+
+    if (count($filtrados) !== count(array_unique($filtrados))) {
+        //  @error('duplicado') 
+        $this->addError('duplicado', 'No puedes seleccionar la misma columna para campos diferentes.');
+        return;
     }
 
+    // 3. Proceso de Importación
+    try {
+        Excel::import(
+            new MaterialesImport(
+                $this->columnaNombre,
+                $this->columnaGci,
+                $this->columnaStock,
+                $this->columnaStockMinimo
+            ),
+            $this->archivoImportacion
+        );
+
+        $this->reset(['archivoImportacion', 'columnaNombre', 'columnaGci', 'columnaStock', 'columnaStockMinimo', 'columnasDetectadas', 'mostrarConfiguracion']);
+        session()->flash('success', 'Materiales importados correctamente.');
+        $this->dispatch('reload-page');
+
+    } catch (\Exception $e) {
+        $this->addError('archivoImportacion', 'Error: ' . $e->getMessage());
+    }
+}
 
     /*
     |---------------------------------------------------
@@ -702,24 +757,25 @@ public function getEstadisticasMasConsumidosProperty()
     */
 public function render()
 {
+
+
     //Tabla de materiales
- $materiales = Material::query()
+$materiales = Material::query()
     ->when($this->buscar, function($q) {
         $q->where(function($q2) {
             $q2->where('nombre', 'like', '%'.$this->buscar.'%')
                ->orWhere('codigo_referencia', 'like', '%'.$this->buscar.'%')
                ->orWhereHas('tipo', function($q3) {
-                   $q3->whereIn('nombre', [
-                       'Eléctrico',
-                       'Sanitario',
-                       'Herrería',
-                       'Otros',
-                       'Servicios',
-                       'Herramientas'
-                   ])->where('nombre', 'like', '%'.$this->buscar.'%');
+                   $q3->where('nombre', 'like', '%'.$this->buscar.'%');
                });
         });
     })
+    ->when($this->filtroEstado === 'critico', fn($q) =>
+        $q->whereColumn('stock_actual', '<=', 'stock_minimo')
+    )
+    ->when($this->filtroEstado === 'optimo', fn($q) =>
+        $q->whereColumn('stock_actual', '>', 'stock_minimo')
+    )
     ->orderBy('nombre')
     ->get();
         $this->hayStockBajo = Material::whereColumn('stock_actual', '<=', 'stock_minimo')->exists();

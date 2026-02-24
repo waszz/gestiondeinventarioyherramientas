@@ -6,44 +6,57 @@ use App\Models\Material;
 use App\Models\MovimientoMaterial;
 use App\Models\TipoMaterial;
 use Maatwebsite\Excel\Concerns\ToModel;
-use Maatwebsite\Excel\Concerns\WithHeadingRow;
+
 use Illuminate\Support\Str;
 
-class MaterialesImport implements ToModel, WithHeadingRow
+class MaterialesImport implements ToModel
 {
+    protected $columnaNombre;
+    protected $columnaGci;
+    protected $columnaStock;
+    protected $columnaStockMinimo;
+
+  public function __construct($columnaNombre, $columnaGci = null, $columnaStock = null, $columnaStockMinimo = null)
+{
+    $this->columnaNombre      = $columnaNombre;
+    $this->columnaGci         = $columnaGci;
+    $this->columnaStock       = $columnaStock;
+    $this->columnaStockMinimo = $columnaStockMinimo;
+}
+
     public function model(array $row)
     {
-        $nombre = trim($row['descripcion'] ?? '');
-        $gci = trim($row['articulo'] ?? '');
+        $nombre = trim($row[$this->columnaNombre] ?? '');
+        $gci    = trim($row[$this->columnaGci] ?? '');
+        $stockActual = (int) ($row[$this->columnaStock] ?? 0);
+        $stockMinimo = (int) ($row[$this->columnaStockMinimo] ?? 0);
 
-        if ($nombre === '') {
+        // Ignorar filas vacías o que tengan encabezado como valor
+        if ($nombre === '' || strtolower($nombre) === 'descripcion' || strtolower($gci) === 'articulo') {
             return null;
         }
 
-        // --- Detectar tipo automáticamente ---
         $tipo = $this->detectarTipo($nombre);
 
         $material = Material::create([
             'nombre'            => $nombre,
             'codigo_referencia' => 'IMP-' . strtoupper(Str::random(8)),
             'gci_codigo'        => $gci ?: null,
-            'stock_actual'      => 0,
-            'stock_minimo'      => 0,
+            'stock_actual' => $stockActual,
+            'stock_minimo' => $stockMinimo,
             'material_esencial' => false,
             'tipo_material_id'  => $tipo?->id,
         ]);
 
-        // Crear movimiento inicial de stock en cero
         MovimientoMaterial::create([
             'material_id' => $material->id,
             'tipo'        => 'entrada',
-            'cantidad'    => 0,
-            'motivo'      => 'Importación inicial desde Excel',
+            'cantidad' => $stockActual,
+            'motivo'      => 'Importación desde Excel',
         ]);
 
         return $material;
     }
-
     private function detectarTipo(string $nombreMaterial)
     {
         $nombre = strtolower($nombreMaterial);

@@ -4,34 +4,44 @@ namespace App\Livewire;
 
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\WithFileUploads;
 use App\Models\Funcionario;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\FuncionariosImport;
 
 class Funcionarios extends Component
 {
-    use WithPagination;
+    use WithPagination, WithFileUploads;
 
     public $numero_funcionario, $nombre, $apellido, $cargo, $empresa, $area, $turno, $telefono;
-    public $search = ''; // búsqueda única
+    public $search = ''; 
     public $reloadFuncionario = 0;
+    public $archivoImportacion;
+    public $columnasDetectadas = []; // columnas detectadas en el Excel
+    public $mostrarConfiguracion = false;
 
-    protected $listeners = ['eliminarFuncionario'];
-    protected $paginationTheme = 'tailwind'; // usa tailwind para estilos
+    // Columnas seleccionadas por el usuario
+    public $columnaNumeroFuncionario;
+    public $columnaNombre;
+    public $columnaApellido;
+    public $columnaCargo;
+    public $columnaEmpresa;
+    public $columnaArea;
+    public $columnaTurno;
+    public $columnaTelefono;
+
+    protected $listeners = ['eliminarFuncionario', 'refreshFuncionario' => '$refresh'];
+    protected $paginationTheme = 'tailwind';
 
     public function mount()
     {
-        // Seguridad: solo admin o supervisor pueden entrar
-        if (!auth()->check()) {
-            abort(403, 'Esta acción no está autorizada.');
-        }
-
-        if (!in_array(auth()->user()->role, ['admin', 'supervisor'])) {
+        if (!auth()->check() || !in_array(auth()->user()->role, ['admin', 'supervisor'])) {
             abort(403, 'Esta acción no está autorizada.');
         }
     }
 
     public function updatingSearch()
     {
-        // Resetea la página cuando se cambia el buscador
         $this->resetPage();
     }
 
@@ -67,7 +77,6 @@ class Funcionarios extends Component
         ]);
 
         session()->flash('message', 'Funcionario creado.');
-
         $this->resetForm();
         $this->resetPage();
         $this->dispatch('funcionarioCreado');
@@ -78,8 +87,84 @@ class Funcionarios extends Component
         Funcionario::destroy($id);
         session()->flash('message', 'Funcionario eliminado.');
         $this->resetPage();
+         $this->dispatch('reload-page');
         $this->reloadFuncionario++;
     }
+
+    // =======================
+    // IMPORTACIÓN EXCEL
+    // =======================
+       public function updatedArchivoImportacion()
+    {
+        $this->resetErrorBag();
+        $this->columnasDetectadas = [];
+
+        $this->validate([
+            'archivoImportacion' => 'required|file|mimes:csv,xlsx',
+        ]);
+
+        $data = Excel::toArray([], $this->archivoImportacion);
+
+        if (!isset($data[0][0])) return;
+
+        $this->columnasDetectadas = array_keys($data[0][0]);
+        $this->mostrarConfiguracion = true;
+    }
+
+
+public function importarFuncionarios()
+{
+    $this->resetErrorBag();
+
+    // Validaciones básicas
+    $this->validate([
+        'archivoImportacion' => 'required|file|mimes:csv,xlsx',
+        'columnaNumeroFuncionario' => 'required',
+        'columnaNombre' => 'required',
+    ]);
+
+    $columnas = [
+        'numero'   => $this->columnaNumeroFuncionario,
+        'nombre'   => $this->columnaNombre,
+        'apellido' => $this->columnaApellido,
+        'cargo'    => $this->columnaCargo,
+        'empresa'  => $this->columnaEmpresa,
+        'area'     => $this->columnaArea,
+        'turno'    => $this->columnaTurno,
+        'telefono' => $this->columnaTelefono,
+    ];
+
+    // Validar duplicados
+    $filtrados = array_filter($columnas, fn($v) => $v !== null && $v !== '');
+    if (count($filtrados) !== count(array_unique($filtrados))) {
+        $this->addError('duplicado', 'No puedes seleccionar la misma columna para campos diferentes.');
+        return;
+    }
+
+    try {
+        Excel::import(new FuncionariosImport($columnas), $this->archivoImportacion);
+
+        $this->reset([
+            'archivoImportacion',
+            'columnaNumeroFuncionario',
+            'columnaNombre',
+            'columnaApellido',
+            'columnaCargo',
+            'columnaEmpresa',
+            'columnaArea',
+            'columnaTurno',
+            'columnaTelefono',
+            'columnasDetectadas',
+            'mostrarConfiguracion'
+        ]);
+
+        session()->flash('success', 'Funcionarios importados correctamente.');
+        $this->dispatch('reload-page');
+
+    } catch (\Exception $e) {
+        $this->addError('archivoImportacion', 'Error: ' . $e->getMessage());
+    }
+}
 
     public function render()
     {
@@ -87,7 +172,6 @@ class Funcionarios extends Component
 
         if (!empty($this->search)) {
             $search = $this->search;
-
             $query->where(function ($q) use ($search) {
                 $q->where('numero_funcionario', 'like', "%{$search}%")
                   ->orWhere('nombre', 'like', "%{$search}%")
@@ -101,7 +185,6 @@ class Funcionarios extends Component
         }
 
         $funcionarios = $query->orderBy('numero_funcionario', 'asc')->paginate(10);
-
 
         return view('livewire.funcionarios', [
             'funcionarios' => $funcionarios

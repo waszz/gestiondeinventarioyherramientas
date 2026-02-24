@@ -1,467 +1,325 @@
-<div  class="p-6">
+<div class="p-6 space-y-6">
 
     <h2 class="text-2xl font-bold mb-6">Gestión de Herramientas</h2>
 
-
-
     @if (session()->has('success'))
-        <div class="bg-green-100 text-green-700 p-3 rounded mb-4">
+        <div class="bg-green-100 text-green-700 p-3 rounded mb-4 shadow-sm">
             {{ session('success') }}
         </div>
     @endif
 
-    <a href="{{ route('panol.herramientas.crear') }}"
-     class="bg-blue-600 text-white px-4 py-2 rounded mb-4 inline-block">
-    + Añadir Nueva Herramienta
-  </a>
-  <a href="#" 
-   wire:click="abrirModalPedido"
-   class="bg-blue-600 text-white px-4 py-2 rounded mb-4 inline-block">
-   + Realizar Pedido
-</a>
-
-<button wire:click="exportarHerramientasCsv"
-    class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-4 py-2 rounded-lg">
-   Exportar Herramientas a CSV
-</button>
-<button wire:click="exportarHerramientasPdf"
-    class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-4 py-2 rounded-lg">
-   Exportar Herramientas a PDF
-</button>
-<div class="mb-4 flex flex-wrap gap-4 items-center">
-    <input type="text" wire:model.live="buscar" placeholder="Buscar por nombre o código"
-           class="border rounded px-3 py-2 w-full md:w-1/5">
-
-    <select wire:model.live="filtroEstado" class="border rounded px-3 py-2 w-full md:w-1/5">
-        <option value="">Todos los estados</option>
-        <option value="disponible">Disponibles</option>
-        <option value="prestamo">En préstamo</option>
-        <option value="fuera_servicio">Fuera de servicio</option>
-    </select>
-
-   @php
-    $stockActual = \App\Models\Bateria::first()?->stock_total ?? 0;
-
-    $colorBadge = $stockActual < 5 
-        ? 'bg-red-100 text-red-700'
-        : ($stockActual < 10 
-            ? 'bg-yellow-100 text-yellow-700'
-            : 'bg-green-100 text-green-700');
-@endphp
-
-<div class="mb-6 p-5 bg-white shadow-sm rounded-xl border border-gray-200 flex flex-wrap items-center justify-between gap-6">
-
-    {{-- Stock visual --}}
-    <div class="flex items-center gap-4">
-
-        <div>
-            <div class="text-sm text-gray-500 font-semibold">
-                Stock actual de baterías
-            </div>
-
-            <div class="mt-1">
-                <span class="px-3 py-2 rounded-full text-lg font-bold {{ $colorBadge }}">
-                    {{ $stockActual }}
-                </span>
-            </div>
-        </div>
-
-    </div>
-
-    {{-- Editor --}}
-    <div class="flex items-end gap-3">
-
-        <div class="flex flex-col">
-            <label class="text-sm font-semibold text-gray-600 mb-1">
-                Modificar stock
-            </label>
-           <input 
-                type="number"
-                wire:model.defer="nuevoStockBaterias"
-                step="1"
-                class="w-32 px-3 py-2 text-sm border border-gray-300 rounded-lg 
-                    focus:outline-none focus:ring-2 focus:ring-blue-500 
-                    focus:border-blue-500 transition"
-            >
-        </div>
-
-        <button 
-            wire:click="guardarStockBaterias"
-            class="bg-blue-600 hover:bg-blue-700 text-white text-sm 
-                   px-4 py-2 rounded-lg shadow-sm transition">
-            Guardar
+    <div class="flex flex-wrap gap-4 mb-6">
+        <a href="{{ route('panol.herramientas.crear') }}"
+           class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-2xl font-semibold">
+           + Añadir Nueva Herramienta
+        </a>
+        <a href="#" wire:click="abrirModalPedido"
+           class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-2xl font-semibold">
+           + Realizar Pedido
+        </a>
+        <button wire:click="exportarHerramientasCsv"
+                class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-2xl font-semibold">
+            Exportar Herramientas a CSV
         </button>
-
+        <button wire:click="exportarHerramientasPdf"
+                class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-2xl font-semibold">
+            Exportar Herramientas a PDF
+        </button>
     </div>
 
-</div>
-    <!-- Botones de acciones múltiples -->
-    <button wire:click="abrirModalPrestamoMultiple"
-            class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold">
-        Préstamo múltiple
-    </button>
+    <div class="flex flex-wrap gap-4 items-center mb-6">
+        <input type="text" wire:model.live="buscar" placeholder="Buscar por nombre o código"
+               class="border rounded-2xl px-4 py-2 w-full sm:w-1/3 focus:ring-2 focus:ring-blue-500 transition">
+        <select wire:model.live="filtroEstado"
+                class="border rounded-2xl px-4 py-2 w-full sm:w-1/3 focus:ring-2 focus:ring-blue-500 transition">
+            <option value="">Todos los estados</option>
+            <option value="disponible">Disponibles</option>
+            <option value="prestamo">En préstamo</option>
+            <option value="fuera_servicio">Fuera de servicio</option>
+        </select>
+    </div>
 
-    <button wire:click="abrirModalDevolucionMultiple"
-            class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold">
-        Devolución múltiple
-    </button>
-</div>
+    @php
+        $stockActual = \App\Models\Bateria::first()?->stock_total ?? 0;
+        $colorBadge = $stockActual < 5 
+            ? 'bg-red-100 text-red-700'
+            : ($stockActual < 10 
+                ? 'bg-yellow-100 text-yellow-700'
+                : 'bg-green-100 text-green-700');
+    @endphp
 
+    <div class="mb-6 p-5 bg-white shadow-sm rounded-xl border border-gray-200 flex flex-wrap items-center justify-between gap-6">
 
-    <div class="bg-white dark:bg-gray-800 shadow rounded overflow-x-auto">
-        <table class="w-full text-sm">
-            <thead class="bg-gray-100 dark:bg-gray-700">
-                <tr>
-                    <th class="text-left p-3">Nombre</th>
-                    <th class="text-left p-3">Código</th>
-                    <th class="text-left p-3">GCI Código</th>
-                    <th class="text-center p-3">Alimentación</th>
-                    <th class="text-center p-3">Cantidad Total</th>
-                    <th class="text-center p-3">Estado</th>
-                    <th class="text-center p-3">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($herramientas as $herramienta)
-                    <tr class="border-b">
-                        <td class="p-3">{{ $herramienta->nombre }}</td>
-                        <td class="p-3">{{ $herramienta->codigo }}</td>
-                        <td class="p-3">{{ $herramienta->gci_codigo }}</td> 
-                        <td class="p-3 text-center">
-    @if($herramienta->tipo_alimentacion === 'bateria')
-        <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-sm font-semibold">
-            Batería
-        </span>
-    @elseif($herramienta->tipo_alimentacion === 'cable')
-        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm font-semibold">
-             Cable
-        </span>
-    @else
-        <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm">
-            Manual
-        </span>
-    @endif
-</td>
-                        <td class="p-3 text-center">{{ $herramienta->cantidad }}</td>
-             <td class="p-3">
-    <div class="flex flex-col items-center">
-        {{-- Disponible --}}
-        <div class="text-green-600 font-semibold mb-1">
-            Disponible: {{ $herramienta->cantidad_disponible }}
+        {{-- Stock visual --}}
+        <div class="flex items-center gap-4">
+            <div>
+                <div class="text-sm text-gray-500 font-semibold">Stock actual de baterías</div>
+                <div class="mt-1">
+                    <span class="px-3 py-2 rounded-full text-lg font-bold {{ $colorBadge }}">
+                        {{ $stockActual }}
+                    </span>
+                </div>
+            </div>
         </div>
 
-{{-- En préstamo con toggle --}}
+        {{-- Editor --}}
+        <div class="flex items-end gap-3 flex-wrap">
+            <div class="flex flex-col">
+                <label class="text-sm font-semibold text-gray-600 mb-1">Modificar stock</label>
+                <input type="number" wire:model.defer="nuevoStockBaterias"
+                       step="1"
+                       class="w-32 px-3 py-2 text-sm border border-gray-300 rounded-lg 
+                              focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            </div>
 
-<div class="text-blue-600 font-semibold w-full mb-1">
-    {{-- Toggle de herramientas --}}
-    <button wire:click="togglePrestamos({{ $herramienta->id }})"
-            class="flex justify-center items-center gap-1 w-full">
-        En préstamo (herramientas): {{ $herramienta->cantidad_prestamo }}
-        <span>
-            @if(isset($mostrarPrestamos[$herramienta->id]))
-                &#9650; {{-- flecha arriba --}}
-            @else
-                &#9660; {{-- flecha abajo --}}
-            @endif
-        </span>
-    </button>
-
-    @if(isset($mostrarPrestamos[$herramienta->id]))
-        <ul class="mt-1 text-sm text-center text-gray-700 px-2">
-            @php
-                $prestamosActivos = $herramienta->prestamos->where('estado', 'prestada');
-                $prestamosAgrupados = $prestamosActivos->groupBy('funcionario_id')->map(function($items) {
-                    return [
-                        'cantidad' => $items->sum('cantidad'),
-                        'fecha' => $items->first()->created_at,
-                        'funcionario' => $items->first()->funcionario,
-                    ];
-                });
-            @endphp
-
-            @forelse($prestamosAgrupados as $prestamo)
-                <li>
-                    {{ $prestamo['funcionario']->nombre }} {{ $prestamo['funcionario']->apellido }}
-                    (desde: {{ $prestamo['fecha']->format('d/m/Y') }})
-                    - Cantidad: {{ $prestamo['cantidad'] }}
-                </li>
-            @empty
-                <li>Ningún préstamo activo</li>
-            @endforelse
-        </ul>
-    @endif
-</div>
-
-<div class="text-green-600 font-semibold w-full mb-1">
-    {{-- Toggle de baterías --}}
-    <button wire:click="togglePrestamosBaterias({{ $herramienta->id }})"
-            class="flex justify-center items-center gap-1 w-full">
-        @php
-    $bateriasActivas = $herramienta->prestamos->where('estado', 'prestada')->sum('cantidad_baterias');
-@endphp
-En préstamo (baterías): {{ $bateriasActivas }}
-        <span>
-            @if(isset($mostrarPrestamosBaterias[$herramienta->id]))
-                &#9650; {{-- flecha arriba --}}
-            @else
-                &#9660; {{-- flecha abajo --}}
-            @endif
-        </span>
-    </button>
-
-    @if(isset($mostrarPrestamosBaterias[$herramienta->id]))
-        <ul class="mt-1 text-sm text-center text-gray-700 px-2">
-            @php
-                $prestamosActivos = $herramienta->prestamos->where('estado', 'prestada')->where('cantidad_baterias', '>', 0);
-                $prestamosAgrupados = $prestamosActivos->groupBy('funcionario_id')->map(function($items) {
-                    return [
-                        'cantidad_baterias' => $items->sum('cantidad_baterias'),
-                        'fecha' => $items->first()->created_at,
-                        'funcionario' => $items->first()->funcionario,
-                    ];
-                });
-            @endphp
-
-            @forelse($prestamosAgrupados as $prestamo)
-                <li>
-                    {{ $prestamo['funcionario']->nombre }} {{ $prestamo['funcionario']->apellido }}
-                    (desde: {{ $prestamo['fecha']->format('d/m/Y') }})
-                    - Baterías: {{ $prestamo['cantidad_baterias'] }}
-                </li>
-            @empty
-                <li>Ningún préstamo de baterías</li>
-            @endforelse
-        </ul>
-    @endif
-</div>
-        {{-- Fuera de servicio --}}
-   <div class="text-red-600 font-semibold">
-    <button wire:click="toggleFueraServicio({{ $herramienta->id }})" class="flex items-center gap-1 justify-center w-full">
-        Fuera de servicio: {{ $herramienta->cantidad_fuera_servicio }}
-        <span>
-            @if(isset($mostrarFueraServicio[$herramienta->id]))
-                &#9650; {{-- flecha arriba --}}
-            @else
-                &#9660; {{-- flecha abajo --}}
-            @endif
-        </span>
-    </button>
-
-    @if(isset($mostrarFueraServicio[$herramienta->id]))
-        <ul class="mt-2 space-y-1 text-sm text-gray-700 text-center">
-            @foreach($herramienta->fueraServicios as $fuera)
-                <li class="flex justify-center items-center gap-2">
-                    <span>
-                        {{ $fuera->cantidad }} - {{ $fuera->motivo }} 
-                        (desde: {{ $fuera->created_at->format('d/m/Y') }})
-                    </span>
-                    <button wire:click="restaurarFueraServicio({{ $fuera->id }})"
-                            class="bg-green-500 text-white px-2 py-0.5 rounded text-xs">
-                        Restaurar
-                    </button>
-                </li>
-            @endforeach
-            @if($herramienta->fueraServicios->isEmpty())
-                <li>Ningún registro</li>
-            @endif
-        </ul>
-    @endif
-</div>
+            <button wire:click="guardarStockBaterias"
+                    class="bg-blue-600 hover:bg-blue-700 text-white text-sm 
+                           px-4 py-2 rounded-lg shadow-sm transition">
+                Guardar
+            </button>
+        </div>
     </div>
-</td>
 
-                        <td class="p-3 text-center flex flex-wrap gap-2 justify-center">
-                            <button wire:click="abrirModalPrestamo({{ $herramienta->id }})"
-                                    class="bg-green-600 text-white px-3 py-1 rounded"
-                                    {{ $herramienta->estado != 'disponible' ? 'disabled' : '' }}>
-                                Prestar
-                            </button>
-   @php
-    // Herramientas pendientes
-    $herramientasPendientes = $herramienta->cantidad_prestamo > 0;
+    <div class="flex flex-wrap gap-4 mb-6">
+        <button wire:click="abrirModalPrestamoMultiple"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-2xl font-semibold">
+            Préstamo múltiple
+        </button>
+        <button wire:click="abrirModalDevolucionMultiple"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-2xl font-semibold">
+            Devolución múltiple
+        </button>
+    </div>
 
-    // Baterías prestadas activas
-    $prestamosActivos = $herramienta->prestamos->where('estado', 'prestada');
-    $bateriasPendientes = $prestamosActivos->sum('cantidad_baterias');
-
-    // Activar botón si hay herramientas o baterías pendientes
-    $pendienteDevolver = $herramientasPendientes || $bateriasPendientes > 0;
-@endphp
-
-<button wire:click="abrirModalDevolver({{ $herramienta->id }})"
-        class="bg-blue-600 text-white px-3 py-1 rounded disabled:opacity-50"
-        {{ $pendienteDevolver ? '' : 'disabled' }}>
-    Devolver
-</button>
-                            <button wire:click="abrirModalFueraServicio({{ $herramienta->id }})"
-                                    class="bg-red-600 text-white px-3 py-1 rounded"
-                                    {{ $herramienta->estado == 'fuera_servicio' ? 'disabled' : '' }}>
-                                Fuera de servicio
-                            </button>
+   <div class="bg-white shadow rounded-xl overflow-x-auto">
+    <table class="w-full text-sm table-auto">
+        <thead>
+            <tr class="bg-gray-50/50 border-b border-gray-100">
+                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">Nombre</th>
+                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">Código</th>
+                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">GCI Código</th>
+                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Alimentación</th>
+                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Cantidad Total</th>
+                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Estado</th>
+                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Acciones</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+            @forelse($herramientas as $herramienta)
+                <tr class="hover:bg-blue-50/40 transition-colors group">
+                    <td class="p-3 text-center font-bold text-gray-800">{{ $herramienta->nombre }}</td>
+                    <td class="p-3 text-center font-mono text-gray-600">{{ $herramienta->codigo }}</td>
+                    <td class="p-3 text-center font-mono text-gray-600">{{ $herramienta->gci_codigo }}</td>
+                    <td class="p-3 text-center">
+                        @if($herramienta->tipo_alimentacion === 'bateria')
+                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-sm font-semibold">Batería</span>
+                        @elseif($herramienta->tipo_alimentacion === 'cable')
+                            <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-sm font-semibold">Cable</span>
+                        @else
+                            <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-sm">Manual</span>
+                        @endif
+                    </td>
+                    <td class="p-3 text-center font-black text-lg">{{ $herramienta->cantidad }}</td>
+                    <td class="p-3 text-center">
+                        <div class="flex flex-col items-center gap-2">
+                            <div class="text-green-600 font-semibold">Disponible: {{ $herramienta->cantidad_disponible }}</div>
                             
-                            <button wire:click="abrirModalEditar({{ $herramienta->id }})"
-        class="bg-blue-500 text-white px-3 py-1 rounded">
-    Editar
-</button>
-                            <button wire:click="abrirModalEliminar({{ $herramienta->id }})"
-        class="bg-red-500 text-white px-3 py-1 rounded">
-    Eliminar
-</button>
+                            {{-- En préstamo --}}
+                            <div class="text-blue-600 w-full text-center">
+                                <button wire:click="togglePrestamos({{ $herramienta->id }})" 
+                                        class="flex justify-center items-center gap-1 w-full rounded-lg px-2 py-1 bg-blue-50 hover:bg-blue-100 transition">
+                                    En préstamo (herramientas): {{ $herramienta->cantidad_prestamo }}
+                                    <span>@if(isset($mostrarPrestamos[$herramienta->id])) &#9650; @else &#9660; @endif</span>
+                                </button>
+                            </div>
 
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="5" class="text-center p-6 text-gray-500">
-                            No hay herramientas
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+                            {{-- En préstamo baterías --}}
+                            <div class="text-green-600 w-full text-center">
+                                <button wire:click="togglePrestamosBaterias({{ $herramienta->id }})" 
+                                        class="flex justify-center items-center gap-1 w-full rounded-lg px-2 py-1 bg-green-50 hover:bg-green-100 transition">
+                                    @php $bateriasActivas = $herramienta->prestamos->where('estado','prestada')->sum('cantidad_baterias'); @endphp
+                                    En préstamo (baterías): {{ $bateriasActivas }}
+                                    <span>@if(isset($mostrarPrestamosBaterias[$herramienta->id])) &#9650; @else &#9660; @endif</span>
+                                </button>
+                            </div>
 
-    <button wire:click="toggleEstadisticas"
-       class="flex items-center bg-blue-600 text-white px-4 py-2 rounded mb-2 mt-2">
-    
-     <span class="mr-2 font-semibold text-lg">Estadísticas de Herramientas</span>
+                            {{-- Fuera de servicio --}}
+                            <div class="text-red-600 w-full text-center">
+                                <button wire:click="toggleFueraServicio({{ $herramienta->id }})"
+                                        class="flex justify-center items-center gap-1 w-full rounded-lg px-2 py-1 bg-red-50 hover:bg-red-100 transition">
+                                    Fuera de servicio: {{ $herramienta->cantidad_fuera_servicio }}
+                                    <span>@if(isset($mostrarFueraServicio[$herramienta->id])) &#9650; @else &#9660; @endif</span>
+                                </button>
+                            </div>
+                        </div>
+                    </td>
 
-    <svg class="w-5 h-5 transition-transform duration-300 {{ $estadisticasAbiertas ? 'rotate-180' : '' }}"
-         fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M19 9l-7 7-7-7" />
-    </svg>
+                    <!-- Acciones -->
+                    <td class="p-4 text-right">
+                        <div class="inline-flex justify-end gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity flex-wrap">
+                            <!-- Prestar -->
+                            <button title="Prestar" wire:click="abrirModalPrestamo({{ $herramienta->id }})"
+                                    class="p-2 bg-green-50 text-green-700 rounded-xl hover:bg-green-600 hover:text-white transition-all flex items-center">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 4v16m8-8H4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
 
-</button>
+                            <!-- Devolver -->
+                            @php
+                                $herramientasPendientes = $herramienta->cantidad_prestamo > 0;
+                                $prestamosActivos = $herramienta->prestamos->where('estado', 'prestada');
+                                $bateriasPendientes = $prestamosActivos->sum('cantidad_baterias');
+                                $pendienteDevolver = $herramientasPendientes || $bateriasPendientes > 0;
+                            @endphp
+                            <button title="Devolver" wire:click="abrirModalDevolver({{ $herramienta->id }})"
+                                    @disabled(!$pendienteDevolver)
+                                    class="p-2 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-600 hover:text-white transition-all flex items-center disabled:opacity-30">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M3 12h18M12 3l9 9-9 9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
 
-@if($estadisticasAbiertas)
+                            <!-- Fuera de servicio -->
+                            <button title="Fuera de servicio" wire:click="abrirModalFueraServicio({{ $herramienta->id }})"
+                                    @disabled($herramienta->estado == 'fuera_servicio')
+                                    class="p-2 bg-red-50 text-red-700 rounded-xl hover:bg-red-600 hover:text-white transition-all flex items-center disabled:opacity-30">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M18.364 5.636l-12.728 12.728M5.636 5.636l12.728 12.728" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
 
-<div class="bg-white dark:bg-gray-800 rounded shadow p-4 mt-4">
+                            <!-- Editar -->
+                            <button title="Editar" wire:click="abrirModalEditar({{ $herramienta->id }})"
+                                    class="p-2 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-600 hover:text-white transition-all flex items-center">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2.828 2.828 0 114 4L11.828 15H9v-2.828l8.586-8.586z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
 
-    <h2 class="text-lg font-bold mb-4">Estadísticas de uso de herramientas</h2>
-    <button wire:click="exportarEstadisticasHerramientasCsv"
-    class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-4 py-2 mb-4 rounded-lg">
-   Exportar Estadísticas de  Herramientas a CSV
-</button>
-
-  <button wire:click="exportarEstadisticasHerramientasPdf"
-    class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-4 py-2 mb-4 rounded-lg">
-   Exportar Estadísticas de  Herramientas a PDF
-</button>
-    <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-
-            <thead class="bg-gray-100 dark:bg-gray-700">
-                <tr>
-                    <th class="text-left p-3">Herramientas más utilizadas</th>
-                    <th class="text-left p-3">Herramientas menos utilizadas</th>
-                    <th class="text-left p-3">Funcionarios que más usan</th>
+                            <!-- Eliminar -->
+                            <button title="Eliminar" wire:click="abrirModalEliminar({{ $herramienta->id }})"
+                                    class="p-2 bg-red-50 text-red-700 rounded-xl hover:bg-red-600 hover:text-white transition-all flex items-center">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
                 </tr>
-            </thead>
-
-            <tbody>
-                @php
-                    $max = max(
-                        $herramientasMasUsadas->count(),
-                        $herramientasMenosUsadas->count(),
-                        $funcionariosUso->count()
-                    );
-                @endphp
-
-                @for($i = 0; $i < $max; $i++)
-                    <tr class="border-b">
-
-                        {{-- MÁS USADAS --}}
-                        <td class="p-3">
-                            @if(isset($herramientasMasUsadas[$i]))
-                                <div class="font-semibold">
-                                    {{ $herramientasMasUsadas[$i]->nombre }}
-                                </div>
-                                <div class="text-xs text-gray-500">
-                                    {{ $herramientasMasUsadas[$i]->total_usos }} usos
-                                </div>
-                            @endif
-                        </td>
-
-                        {{-- MENOS USADAS --}}
-                        <td class="p-3">
-                            @if(isset($herramientasMenosUsadas[$i]))
-                                <div class="font-semibold">
-                                    {{ $herramientasMenosUsadas[$i]->nombre }}
-                                </div>
-                                <div class="text-xs text-gray-500">
-                                    {{ $herramientasMenosUsadas[$i]->total_usos }} usos
-                                </div>
-                            @endif
-                        </td>
-
-                        {{-- FUNCIONARIOS --}}
-                        <td class="p-3">
-                            @if(isset($funcionariosUso[$i]))
-                                <div class="font-semibold">
-                                    {{ $funcionariosUso[$i]->funcionario }}
-                                </div>
-                                <div class="text-xs text-gray-500">
-                                    {{ $funcionariosUso[$i]->total }} usos
-                                </div>
-                            @endif
-                        </td>
-
-                    </tr>
-                @endfor
-
-                @if($max === 0)
-                    <tr>
-                        <td colspan="3" class="text-center p-6 text-gray-500">
-                            No hay estadísticas registradas todavía
-                        </td>
-                    </tr>
-                @endif
-
-            </tbody>
-
-        </table>
-    </div>
-
+            @empty
+                <tr>
+                    <td colspan="7" class="text-center p-6 text-gray-500">No hay herramientas</td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
 </div>
 
+   <!-- ========================== BOTONES PRINCIPALES ========================== -->
+<div class="flex flex-col md:flex-row md:gap-4 w-full">
+
+    <!-- Botón Estadísticas -->
+    <button wire:click="toggleEstadisticas"
+            class="flex items-center justify-between bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow mb-2 md:mb-0 w-full md:w-auto transition-all">
+        <span class="font-semibold text-base md:text-lg">Estadísticas de Herramientas</span>
+        <svg class="w-5 h-5 transition-transform duration-300 {{ $estadisticasAbiertas ? 'rotate-180' : '' }}"
+             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 9l-7 7-7-7" />
+        </svg>
+    </button>
+
+    <!-- Botón Historial -->
+    <button wire:click="toggleHistorial"
+            class="flex items-center justify-between bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow w-full md:w-auto transition-all">
+        <span class="font-semibold text-base md:text-lg">Historial de Herramientas</span>
+        <svg class="w-5 h-5 transition-transform duration-300 {{ $historialAbierto ? 'rotate-180' : '' }}"
+             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 9l-7 7-7-7" />
+        </svg>
+    </button>
+</div>
+
+<!-- ========================== ESTADÍSTICAS ========================== -->
+@if($estadisticasAbiertas)
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mt-4">
+    <h2 class="text-lg font-bold mb-4">Estadísticas de uso de herramientas</h2>
+
+    <div class="flex flex-col sm:flex-row sm:gap-4 mb-4 flex-wrap">
+        <button wire:click="exportarEstadisticasHerramientasCsv"
+                class="bg-gray-500 hover:bg-gray-600 text-white font-semibold px-4 py-2 rounded-lg mb-2 sm:mb-0 transition-colors">
+            Exportar CSV
+        </button>
+        <button wire:click="exportarEstadisticasHerramientasPdf"
+                class="bg-gray-500 hover:bg-gray-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors">
+            Exportar PDF
+        </button>
+    </div>
+
+    <div class="overflow-x-auto rounded-lg border shadow-sm">
+        <table class="w-full text-sm min-w-[500px]">
+            <thead class="bg-gray-100 dark:bg-gray-700">
+            <tr>
+                <th class="text-left p-3">Herramientas más utilizadas</th>
+                <th class="text-left p-3">Herramientas menos utilizadas</th>
+                <th class="text-left p-3">Funcionarios que más usan</th>
+            </tr>
+            </thead>
+            <tbody>
+            @php
+                $max = max($herramientasMasUsadas->count(), $herramientasMenosUsadas->count(), $funcionariosUso->count());
+            @endphp
+            @for($i=0; $i<$max; $i++)
+            <tr class="border-b hover:bg-blue-50 transition-colors">
+                <td class="p-3">
+                    @isset($herramientasMasUsadas[$i])
+                        <div class="font-semibold">{{ $herramientasMasUsadas[$i]->nombre }}</div>
+                        <div class="text-xs text-gray-500">{{ $herramientasMasUsadas[$i]->total_usos }} usos</div>
+                    @endisset
+                </td>
+                <td class="p-3">
+                    @isset($herramientasMenosUsadas[$i])
+                        <div class="font-semibold">{{ $herramientasMenosUsadas[$i]->nombre }}</div>
+                        <div class="text-xs text-gray-500">{{ $herramientasMenosUsadas[$i]->total_usos }} usos</div>
+                    @endisset
+                </td>
+                <td class="p-3">
+                    @isset($funcionariosUso[$i])
+                        <div class="font-semibold">{{ $funcionariosUso[$i]->funcionario }}</div>
+                        <div class="text-xs text-gray-500">{{ $funcionariosUso[$i]->total }} usos</div>
+                    @endisset
+                </td>
+            </tr>
+            @endfor
+            @if($max === 0)
+            <tr>
+                <td colspan="3" class="text-center p-6 text-gray-500">No hay estadísticas registradas todavía</td>
+            </tr>
+            @endif
+            </tbody>
+        </table>
+    </div>
+</div>
 @endif
 
-
-
-
-   <button wire:click="toggleHistorial"
-    class="flex items-center bg-blue-600 text-white px-4 py-2 rounded mb-2 mt-2">
-    
-    <span class="mr-2 font-semibold text-lg">Historial de Herammientas</span>
-
-    <svg class="w-5 h-5 transition-transform duration-300 {{ $historialAbierto ? 'rotate-180' : '' }}"
-         fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M19 9l-7 7-7-7" />
-    </svg>
-</button>
-
+<!-- ========================== HISTORIAL ========================== -->
 @if($historialAbierto)
-
-<div class="bg-white dark:bg-gray-800 rounded shadow p-4 mt-4">
-
-    {{-- FILTROS --}}
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mt-4">
+    <!-- FILTROS RESPONSIVE -->
     <div class="flex flex-wrap gap-4 mb-4 items-end">
-
         <div>
             <label class="text-sm font-semibold">Desde:</label>
-            <input type="date" wire:model.live="filtroDesde" class="border rounded p-2">
+            <input type="date" wire:model.live="filtroDesde" class="border rounded p-2 w-full min-w-[150px]">
         </div>
-
         <div>
             <label class="text-sm font-semibold">Hasta:</label>
-            <input type="date" wire:model.live="filtroHasta" class="border rounded p-2">
+            <input type="date" wire:model.live="filtroHasta" class="border rounded p-2 w-full min-w-[150px]">
         </div>
-
         <div>
             <label class="text-sm font-semibold">Tipo:</label>
-            <select wire:model.live="filtroTipo" class="border rounded p-2">
+            <select wire:model.live="filtroTipo" class="border rounded p-2 w-full min-w-[150px]">
                 <option value="">Todos</option>
                 <option value="prestamo">Préstamo</option>
                 <option value="devolucion">Devolución</option>
@@ -471,108 +329,69 @@ En préstamo (baterías): {{ $bateriasActivas }}
                 <option value="restaurado">Restaurado</option>
             </select>
         </div>
-
         <div class="flex-1 min-w-[200px]">
             <label class="text-sm font-semibold">Herramienta:</label>
             <input type="text" wire:model.live="filtroBusqueda"
-                   placeholder="Buscar nombre o código"
-                   class="border rounded p-2 w-full">
+                   placeholder="Buscar nombre o código" class="border rounded p-2 w-full">
         </div>
-
         <div class="flex-1 min-w-[200px]">
             <label class="text-sm font-semibold">Funcionario:</label>
             <input type="text" wire:model.live="filtroFuncionario"
-                   placeholder="Buscar funcionario"
-                   class="border rounded p-2 w-full">
+                   placeholder="Buscar funcionario" class="border rounded p-2 w-full">
         </div>
-
     </div>
 
-    <button wire:click="exportarHistorialHerramientasCsv"
-    class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-4 py-2 mb-4 rounded-lg">
-   Exportar Historial de Herramientas a CSV
-</button>
+    <!-- BOTONES EXPORTACIÓN -->
+    <div class="flex flex-col sm:flex-row sm:gap-4 mb-4 flex-wrap">
+        <button wire:click="exportarHistorialHerramientasCsv"
+                class="bg-gray-500 hover:bg-gray-600 text-white font-semibold px-4 py-2 rounded-lg mb-2 sm:mb-0">
+            Exportar CSV
+        </button>
+        <button wire:click="exportarHistorialHerramientasPdf"
+                class="bg-gray-500 hover:bg-gray-600 text-white font-semibold px-4 py-2 rounded-lg">
+            Exportar PDF
+        </button>
+    </div>
 
-  <button wire:click="exportarHistorialHerramientasPdf"
-    class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-4 py-2 mb-4 rounded-lg">
-   Exportar Historial de Herramientas a PDF
-</button>
-    {{-- TABLA --}}
-    <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-
+    <!-- TABLA RESPONSIVE -->
+    <div class="overflow-x-auto rounded-lg border shadow-sm">
+        <table class="w-full text-sm min-w-[600px]">
             <thead class="bg-gray-100 dark:bg-gray-700">
-                <tr>
-                    <th class="text-left p-3">Fecha</th>
-                    <th class="text-left p-3">Herramienta</th>
-                    <th class="text-left p-3">Tipo</th>
-                    <th class="px-3 py-2">Baterías</th>
-                    <th class="text-left p-3">Funcionario</th>
-                    <th class="text-left p-3">Detalle</th>
-                </tr>
+            <tr>
+                <th class="text-left p-3">Fecha</th>
+                <th class="text-left p-3">Herramienta</th>
+                <th class="text-left p-3">Tipo</th>
+                <th class="px-3 py-2 text-center">Baterías</th>
+                <th class="text-left p-3">Funcionario</th>
+                <th class="text-left p-3">Detalle</th>
+            </tr>
             </thead>
-
             <tbody>
-                @forelse($historial as $item)
-                    <tr class="border-b">
-
-                        <td class="p-3">
-                            {{ $item->created_at->format('d/m/Y H:i') }}
-                        </td>
-
-                        <td class="p-3">
-                            {{ $item->nombre }}
-                            <br>
-                            <span class="text-xs text-gray-500">
-                                {{ $item->codigo }}
-                            </span>
-                        </td>
-
-                        <td class="p-3 capitalize">
-                            {{ str_replace('_',' ', $item->tipo) }}
-                        </td>
-                        <td class="px-3 py-2 text-center">
-                            @if($item->cantidad_baterias > 0)
-                                <span class="inline-flex items-center gap-1 bg-green-100 text-green-700 
-                                            px-2 py-1 rounded-full text-xs font-semibold">
-                                    {{ $item->cantidad_baterias }}
-                                </span>
-                            @else
-                                <span class="text-gray-400">—</span>
-                            @endif
-                        </td>
-
-                        <td class="p-3">
-                            {{ $item->funcionario ?? 'N/A' }}
-                        </td>
-
-                        <td class="p-3 text-gray-600">
-    <div>{{ $item->detalle }}</div>
-
-    @if($item->observacion)
-        <div class="text-xs text-gray-600 mt-1">
-            Obs: {{ $item->observacion }}
-        </div>
-    @endif
-</td>
-
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="6" class="text-center p-6 text-gray-500">
-                            No hay movimientos registrados
-                        </td>
-                    </tr>
-                @endforelse
+            @forelse($historial as $item)
+            <tr class="border-b hover:bg-blue-50 transition-colors">
+                <td class="p-3">{{ $item->created_at->format('d/m/Y H:i') }}</td>
+                <td class="p-3">{{ $item->nombre }}<br><span class="text-xs text-gray-500">{{ $item->codigo }}</span></td>
+                <td class="p-3 capitalize">{{ str_replace('_',' ', $item->tipo) }}</td>
+                <td class="px-3 py-2 text-center">
+                    @if($item->cantidad_baterias > 0)
+                        <span class="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-semibold">{{ $item->cantidad_baterias }}</span>
+                    @else
+                        <span class="text-gray-400">—</span>
+                    @endif
+                </td>
+                <td class="p-3">{{ $item->funcionario ?? 'N/A' }}</td>
+                <td class="p-3 text-gray-600">{{ $item->detalle }}
+                    @if($item->observacion)<div class="text-xs text-gray-500 mt-1">Obs: {{ $item->observacion }}</div>@endif
+                </td>
+            </tr>
+            @empty
+            <tr><td colspan="6" class="text-center p-6 text-gray-500">No hay movimientos registrados</td></tr>
+            @endforelse
             </tbody>
-
         </table>
     </div>
-
 </div>
-
 @endif
-
 
 
     @if($mostrarModalEditar)

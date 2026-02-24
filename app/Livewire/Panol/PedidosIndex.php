@@ -383,24 +383,19 @@ public function completarPedido($pedidoId)
 {
     $pedido = Pedido::findOrFail($pedidoId);
 
-    // Evitar completar dos veces
-    if ($pedido->estado === 'completado') {
-        return;
-    }
+    if ($pedido->estado === 'completado') return;
 
     // ============================
     // Manejo de materiales
     // ============================
     if ($pedido->tipo === 'material') {
         if ($pedido->materiales_id) {
-            // Material existente: sumar stock
             $material = Material::find($pedido->materiales_id);
             if ($material) {
                 $material->stock_actual += $pedido->cantidad;
                 $material->save();
             }
         } else {
-            // Material nuevo: crear registro
             $material = Material::create([
                 'nombre' => $pedido->nombre,
                 'codigo_referencia' => $pedido->codigo ?? 'N/A',
@@ -408,12 +403,10 @@ public function completarPedido($pedidoId)
                 'stock_actual' => $pedido->cantidad,
                 'stock_minimo' => $pedido->stock_minimo ?? 0,
                 'gci_codigo' => $pedido->numero_seguimiento,
-                
             ]);
 
-            // Actualizar el pedido para vincular el nuevo material
             $pedido->materiales_id = $material->id;
-             $pedido->save();
+            $pedido->save();
         }
     }
 
@@ -422,7 +415,6 @@ public function completarPedido($pedidoId)
     // ============================
     if ($pedido->tipo === 'herramienta') {
         if ($pedido->herramientas_id) {
-            // Herramienta existente: sumar stock
             $herramienta = Herramienta::find($pedido->herramientas_id);
             if ($herramienta) {
                 $herramienta->cantidad += $pedido->cantidad;
@@ -430,7 +422,6 @@ public function completarPedido($pedidoId)
                 $herramienta->save();
             }
         } else {
-            // Herramienta nueva: crear registro
             $herramienta = Herramienta::create([
                 'nombre' => $pedido->nombre,
                 'codigo' => $pedido->codigo,
@@ -441,8 +432,24 @@ public function completarPedido($pedidoId)
                 'tipo_alimentacion' => $pedido->tipo_alimentacion,
             ]);
 
-            // Actualizar el pedido para vincular la nueva herramienta
             $pedido->herramientas_id = $herramienta->id;
+            $pedido->save();
+        }
+
+        // ============================
+        // Generar material asociado automáticamente
+        // ============================
+        $materialExistente = Material::where('gci_codigo', $pedido->numero_seguimiento)->first();
+
+        if (!$materialExistente) {
+            Material::create([
+                'nombre' => $pedido->nombre,
+                'codigo_referencia' => $pedido->codigo ?? 'N/A',
+                'sku' => $pedido->sku,
+                'stock_actual' => $pedido->cantidad,
+                'stock_minimo' => 0,
+                'gci_codigo' => $pedido->numero_seguimiento,
+            ]);
         }
     }
 
@@ -455,7 +462,6 @@ public function completarPedido($pedidoId)
     $this->dispatch('reload-page');
     session()->flash('success', 'Pedido completado y stock actualizado');
 }
-
 
 
     // =========================

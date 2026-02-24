@@ -80,16 +80,18 @@ public function togglePrestamosBaterias($herramientaId)
     }
 }
 
- public function guardarStockBaterias()
+public function guardarStockBaterias()
 {
+    // Buscar la primera batería o crearla si no existe
     $bateria = Bateria::first();
     if (!$bateria) {
-        session()->flash('error', 'No existe registro de baterías.');
-        return;
+        $bateria = Bateria::create([
+            'stock_total' => 0
+        ]);
     }
 
     // Sumar o restar según el valor ingresado
-    $bateria->stock_total += $this->nuevoStockBaterias; // si es negativo, resta automáticamente
+    $bateria->stock_total += $this->nuevoStockBaterias;
     $bateria->save();
 
     // Actualizar variable para la vista

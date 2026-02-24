@@ -1,248 +1,271 @@
 <div class="bg-white dark:bg-gray-800 rounded shadow p-4 mt-4">
-     {{-- ALERTA EXITO --}}
+
+    {{-- ALERTA ÉXITO --}}
     @if (session()->has('success'))
         <div class="mb-4 p-4 bg-green-100 text-green-800 rounded shadow">
             {{ session('success') }}
         </div>
     @endif
+
     @php
-$coloresEstado = [
-    'pendiente' => 'text-yellow-500 font-bold',
-    'aprobado' => 'text-green-500 font-bold',
-    'rechazado' => 'text-red-500 font-bold',
-];
-@endphp
-  <!-- Botón abrir modal -->
-<div class="flex justify-between mb-4">
-    <h2 class="text-2xl font-bold">Gestión de Pedidos</h2>
+        $coloresEstado = [
+            'pendiente' => 'text-yellow-500 font-bold',
+            'aprobado' => 'text-green-500 font-bold',
+            'rechazado' => 'text-red-500 font-bold',
+        ];
+    @endphp
 
-    <button
-        wire:click="$set('mostrarModalCrear', true)"
-        class="bg-blue-600 text-white px-3 py-2 rounded">
-        + Nuevo pedido
-    </button>
-</div>
-
-<div class="flex gap-2 mb-4">
-
-    <button wire:click="exportarPedidosCsv('pendiente')"
-        class="bg-gray-500 text-white px-4 py-2 rounded-lg">
-        Exportar pendientes CSV
-    </button>
-
-    <button wire:click="exportarPedidosPdf('pendiente')"
-        class="bg-gray-500 text-white px-4 py-2 rounded-lg">
-        Exportar pendientes PDF
-    </button>
-
-    <button wire:click="exportarPedidosCsv('completado')"
-        class="bg-gray-500 text-white px-4 py-2 rounded-lg">
-        Exportar completados CSV
-    </button>
-
-    <button wire:click="exportarPedidosPdf('completado')"
-        class="bg-gray-500 text-white px-4 py-2 rounded-lg">
-        Exportar completados PDF
-    </button>
-
-    <button wire:click="exportarPedidosCsv('rechazado')"
-        class="bg-gray-500 text-white px-4 py-2 rounded-lg">
-        Exportar rechazados CSV
-    </button>
-
-    <button wire:click="exportarPedidosPdf('rechazado')"
-        class="bg-gray-500 text-white px-4 py-2 rounded-lg">
-        Exportar rechazados PDF
-    </button>
-
-</div>
-
-
-<!-- Modal Crear Pedido -->
-<div 
-    style="display: {{ $mostrarModalCrear ? 'flex' : 'none' }};
-           position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-           justify-content: center; align-items: center; z-index: 50;">
-    <div class="bg-white p-6 rounded shadow w-96">
-        <h2 class="font-bold mb-4">Crear Pedido</h2>
-
-        <!-- Tipo de Pedido -->
-        <div class="mb-4">
-            <label class="block mb-1 font-semibold">Tipo de Pedido</label>
-            <select wire:model.live="tipoPedido" class="w-full border p-2 rounded">
-                <option value="">Seleccionar...</option>
-                <option value="herramienta_existente">Herramienta Existente</option>
-                <option value="herramienta_nueva">Herramienta Nueva</option>
-                <option value="material_existente">Material Existente</option>
-                <option value="material_nuevo">Material Nuevo</option>
-            </select>
-        </div>
-
-        <!-- Seleccionar existente -->
-        @if($tipoPedido === 'herramienta_existente')
-            <div class="mb-4">
-                <label class="block mb-1 font-semibold">Elegir Herramienta</label>
-                <select wire:model.live="herramientaSeleccionadaId" class="w-full border p-2 rounded">
-                    <option value="">Seleccionar herramienta</option>
-                    @foreach($herramientas as $herr)
-                        <option value="{{ $herr->id }}">{{ $herr->nombre }} (Disponible: {{ $herr->cantidad_disponible }})</option>
-                    @endforeach
-                </select>
-                @if($herramientaSeleccionadaId)
-                    <label class="block mt-2 font-medium">Cantidad a pedir</label>
-<input 
-    type="number" 
-    min="1" 
-    placeholder="Cantidad a pedir" 
-    wire:model="cantidadNuevo" 
-    class="w-full mt-2 border p-2 rounded"
-/>
-                    <input type="text" placeholder="SKU (opcional)" wire:model="skuNuevo" class="w-full mt-2 border p-2 rounded">
-                @endif
-            </div>
-        @elseif($tipoPedido === 'material_existente')
-            <div class="mb-4">
-                <label class="block mb-1 font-semibold">Elegir Material</label>
-                <select wire:model.live="materialSeleccionadoId" class="w-full border p-2 rounded">
-                    <option value="">Seleccionar material</option>
-                    @foreach($materiales as $mat)
-                        <option value="{{ $mat->id }}">{{ $mat->nombre }} (Stock: {{ $mat->stock_actual }})</option>
-                    @endforeach
-                </select>
-                @if($materialSeleccionadoId)
-                <label class="block mt-2 font-medium">Cantidad a pedir</label>
-                    <input type="number" min="1" placeholder="Cantidad a pedir" wire:model="cantidadNuevo" class="w-full mt-2 border p-2 rounded">
-                    <input type="text" placeholder="SKU (opcional)" wire:model="skuNuevo" class="w-full mt-2 border p-2 rounded">
-                @endif
-            </div>
-        @else
-           <!-- Campos para nuevo -->
-<div class="mb-4">
-    <input type="text" placeholder="Nombre Nuevo" wire:model="nombreNuevo" class="w-full border p-2 rounded mb-2">
-
-    <input type="text" placeholder="Código Nuevo" wire:model="codigoNuevo" class="w-full border p-2 rounded mb-2">
-
-    <input type="number" min="1" placeholder="Cantidad a pedir" wire:model="cantidadNuevo" class="w-full border p-2 rounded mb-2">
-
-<!-- SOLO PARA NUEVO GCI -->
-@if(in_array($tipoPedido, ['material_nuevo', 'herramienta_nueva']))
-    <input type="text"
-           placeholder="GCI"
-           wire:model="gciNuevo"
-           class="w-full border p-2 rounded mb-2">
-    @error('gciNuevo') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
-@endif
-<!-- SOLO PARA NUEVA HERRAMIENTA -->
-@if($tipoPedido === 'herramienta_nueva')
-    <div class="mb-2">
-        <label class="block mb-1 font-semibold">Tipo de herramienta</label>
-        <select wire:model="tipoHerramientaNuevo" class="w-full border p-2 rounded">
-            <option value="">Seleccionar...</option>
-            <option value="cable">Cable</option>
-            <option value="bateria">Batería</option>
-            <option value="no_aplica">No aplica</option>
-        </select>
-        @error('tipoHerramientaNuevo') 
-            <span class="text-red-500 text-sm">{{ $message }}</span> 
-        @enderror
+    <!-- Header + Botón crear -->
+    <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
+        <h2 class="text-2xl font-bold">Gestión de Pedidos</h2>
+        <button
+            wire:click="$set('mostrarModalCrear', true)"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition">
+            + Nuevo pedido
+        </button>
     </div>
-@endif
 
+    <!-- Exportar -->
+    <div class="flex flex-wrap gap-2 mb-4">
+        @foreach(['pendiente','completado','rechazado'] as $estado)
+            <button wire:click="exportarPedidosCsv('{{ $estado }}')" 
+                    class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition">
+                Exportar {{ ucfirst($estado) }} CSV
+            </button>
+            <button wire:click="exportarPedidosPdf('{{ $estado }}')" 
+                    class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition">
+                Exportar {{ ucfirst($estado) }} PDF
+            </button>
+        @endforeach
+    </div>
 
-    <input type="text" placeholder="SKU (opcional)" wire:model="skuNuevo" class="w-full border p-2 rounded">
-</div>
-        @endif
+    <!-- Modal Crear Pedido -->
+    <div 
+        style="display: {{ $mostrarModalCrear ? 'flex' : 'none' }};"
+        class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
 
-        <!-- Botones -->
-        <div class="flex justify-end gap-2 mt-4">
-            <button wire:click="$set('mostrarModalCrear', false)" class="bg-gray-500 text-white px-3 py-1 rounded">Cancelar</button>
-            <button wire:click="guardarPedido" class="bg-blue-600 text-white px-3 py-1 rounded">Guardar</button>
+            <h2 class="text-lg font-bold mb-4">Crear Pedido</h2>
+
+            <!-- Tipo de Pedido -->
+            <div class="mb-4">
+                <label class="block mb-1 font-semibold">Tipo de Pedido</label>
+                <select wire:model.live="tipoPedido" class="w-full border rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Seleccionar...</option>
+                    <option value="herramienta_existente">Herramienta Existente</option>
+                    <option value="herramienta_nueva">Herramienta Nueva</option>
+                    <option value="material_existente">Material Existente</option>
+                    <option value="material_nuevo">Material Nuevo</option>
+                </select>
+            </div>
+
+            <!-- Herramienta existente -->
+            @if($tipoPedido === 'herramienta_existente')
+                <div class="mb-4">
+                    <label class="block mb-1 font-semibold">Elegir Herramienta</label>
+                    <select wire:model.live="herramientaSeleccionadaId" class="w-full border rounded p-2">
+                        <option value="">Seleccionar herramienta</option>
+                        @foreach($herramientas as $herr)
+                            <option value="{{ $herr->id }}">{{ $herr->nombre }} (Disponible: {{ $herr->cantidad_disponible }})</option>
+                        @endforeach
+                    </select>
+                    @if($herramientaSeleccionadaId)
+                        <label class="block mt-2 font-medium">Cantidad a pedir</label>
+                        <input type="number" min="1" placeholder="Cantidad a pedir" wire:model="cantidadNuevo" class="w-full mt-2 border p-2 rounded">
+                        <input type="text" placeholder="SKU (opcional)" wire:model="skuNuevo" class="w-full mt-2 border p-2 rounded">
+                    @endif
+                </div>
+
+            <!-- Material existente -->
+            @elseif($tipoPedido === 'material_existente')
+                <div class="mb-4">
+                    <label class="block mb-1 font-semibold">Elegir Material</label>
+                    <select wire:model.live="materialSeleccionadoId" class="w-full border rounded p-2">
+                        <option value="">Seleccionar material</option>
+                        @foreach($materiales as $mat)
+                            <option value="{{ $mat->id }}">{{ $mat->nombre }} (Stock: {{ $mat->stock_actual }})</option>
+                        @endforeach
+                    </select>
+                    @if($materialSeleccionadoId)
+                        <label class="block mt-2 font-medium">Cantidad a pedir</label>
+                        <input type="number" min="1" placeholder="Cantidad a pedir" wire:model="cantidadNuevo" class="w-full mt-2 border p-2 rounded">
+                        <input type="text" placeholder="SKU (opcional)" wire:model="skuNuevo" class="w-full mt-2 border p-2 rounded">
+                    @endif
+                </div>
+
+            <!-- Nuevo -->
+            @else
+                <div class="space-y-4">
+
+                    <div>
+                        <label class="block text-sm font-medium">Nombre *</label>
+                        <input type="text" wire:model="nombreNuevo" class="w-full border rounded px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        @error('nombreNuevo')<span class="text-red-500 text-sm">{{ $message }}</span>@enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium">Código</label>
+                        <input type="text" wire:model="codigoNuevo" class="w-full border rounded px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        @error('codigoNuevo')<span class="text-red-500 text-sm">{{ $message }}</span>@enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium">Cantidad a pedir *</label>
+                        <input type="number" min="1" wire:model="cantidadNuevo" class="w-full border rounded px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        @error('cantidadNuevo')<span class="text-red-500 text-sm">{{ $message }}</span>@enderror
+                    </div>
+
+                    @if($tipoPedido === 'material_nuevo')
+                        <div>
+                            <label class="block text-sm font-medium">Stock Mínimo *</label>
+                            <input type="number" wire:model="stockMinimoNuevo" min="0" class="w-full border rounded px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            @error('stockMinimoNuevo')<span class="text-red-500 text-sm">{{ $message }}</span>@enderror
+                        </div>
+                    @endif
+
+                    @if(in_array($tipoPedido, ['material_nuevo','herramienta_nueva']))
+                        <div>
+                            <label class="block text-sm font-medium">Código GCI</label>
+                            <input type="text" wire:model="gciNuevo" class="w-full border rounded px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            @error('gciNuevo')<span class="text-red-500 text-sm">{{ $message }}</span>@enderror
+                        </div>
+                    @endif
+
+                    @if($tipoPedido === 'herramienta_nueva')
+                        <div>
+                            <label class="block text-sm font-medium">Tipo de herramienta *</label>
+                            <select wire:model="tipoHerramientaNuevo" class="w-full border rounded px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Seleccionar...</option>
+                                <option value="cable">Cable</option>
+                                <option value="bateria">Batería</option>
+                                <option value="no_aplica">No aplica</option>
+                            </select>
+                            @error('tipoHerramientaNuevo')<span class="text-red-500 text-sm">{{ $message }}</span>@enderror
+                        </div>
+                    @endif
+
+                    <div>
+                        <label class="block text-sm font-medium">SKU (opcional)</label>
+                        <input type="text" wire:model="skuNuevo" class="w-full border rounded px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        @error('skuNuevo')<span class="text-red-500 text-sm">{{ $message }}</span>@enderror
+                    </div>
+
+                </div>
+            @endif
+
+            <div class="flex flex-wrap justify-end gap-2 mt-4">
+                <button wire:click="$set('mostrarModalCrear', false)" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded transition">Cancelar</button>
+                <button wire:click.prevent="guardarPedido" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition">Guardar</button>
+            </div>
         </div>
     </div>
-</div>
 
+<div class="hidden md:block bg-white shadow-xl shadow-gray-200/50 rounded-3xl overflow-hidden border border-gray-100">
+    <table class="w-full text-left border-collapse">
+        <thead>
+            <tr class="bg-gray-50/50 border-b border-gray-100">
+                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">Fecha</th>
+                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">Item</th>
+                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">Código</th>
+                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">SKU</th>
+                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Seguimiento</th>
+                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Cantidad</th>
+                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Estado</th>
+                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Acciones</th>
+            </tr>
+        </thead>
 
-    {{-- TABLA --}}
-    <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <tbody class="divide-y divide-gray-50">
+            @forelse($pedidos as $pedido)
+                <tr class="hover:bg-blue-50/40 transition-colors group">
+                    <!-- Fecha -->
+                    <td class="p-4 font-mono text-gray-600">{{ $pedido->created_at->format('d/m/Y H:i') }}</td>
 
-            <thead class="bg-gray-100 dark:bg-gray-700">
-                <tr>
-                    <th class="p-3 text-left">Fecha</th>
-                    <th class="p-3 text-left">Item</th>
-                    <th class="p-3 text-left">Código</th>
-                    <th class="p-3 text-left">SKU</th>
-                    <th class="p-3 text-left">Seguimiento</th>
-                    <th class="p-3 text-left">Cantidad</th>
-                    <th class="p-3 text-left">Estado</th>
-                    <th class="p-3 text-left">Acciones</th>
-                </tr>
-            </thead>
+                    <!-- Item -->
+                    <td class="p-4 font-bold text-gray-800">{{ $pedido->nombre }}</td>
 
-            <tbody>
-                @forelse($pedidos as $pedido)
-                    <tr class="border-b">
+                    <!-- Código -->
+                    <td class="p-4 font-mono text-gray-600">{{ $pedido->codigo ?? '---' }}</td>
 
-                        <td class="p-3">
-                            {{ $pedido->created_at->format('d/m/Y H:i') }}
-                        </td>
+                    <!-- SKU -->
+                    <td class="p-4 font-mono text-gray-600">{{ $pedido->sku ?? '---' }}</td>
 
-                        <td class="p-3 font-semibold">
-                            {{ $pedido->nombre }}
-                            <div class="text-xs text-gray-500 capitalize">
-                                {{ $pedido->tipo }}
-                            </div>
-                        </td>
+                    <!-- Seguimiento -->
+                    <td class="p-4 text-center text-gray-600">{{ $pedido->numero_seguimiento ?? '---' }}</td>
 
-                        <td class="p-3">{{ $pedido->codigo }}</td>
-                        <td class="p-3">{{ $pedido->sku }}</td>
-                        <td class="p-3">{{ $pedido->numero_seguimiento ?? '---' }}</td>
-                        <td class="p-3">{{ $pedido->cantidad }}</td>
+                    <!-- Cantidad -->
+                    <td class="p-4 text-center font-black">{{ $pedido->cantidad }}</td>
 
-                       <td class="p-3">
-                        <span class="px-2 py-1 rounded text-white
-                            {{ 
-                                $pedido->estado == 'Pendiente' ? 'bg-orange-600 font-bold' : 
-                                ($pedido->estado == 'Completado' ? 'bg-green-600 font-bold' : 
-                                ($pedido->estado == 'Rechazado' ? 'bg-red-600 font-bold' : 'bg-orange-600')) 
-                            }}
-                        ">
-                            {{ ucfirst($pedido->estado) }}
+                    <!-- Estado -->
+                    <td class="p-4 text-center">
+                        @php
+                            $estadoClase = match(strtolower($pedido->estado)) {
+                                'pendiente' => 'bg-orange-100 text-orange-700',
+                                'completado' => 'bg-green-100 text-green-700',
+                                'rechazado' => 'bg-red-100 text-red-700',
+                                default => 'bg-gray-100 text-gray-700'
+                            };
+                            $estadoPing = match(strtolower($pedido->estado)) {
+                                'pendiente' => 'bg-orange-500 animate-ping',
+                                'completado' => 'bg-green-500',
+                                'rechazado' => 'bg-red-500',
+                                default => 'bg-gray-500'
+                            };
+                            $estadoTexto = ucfirst($pedido->estado);
+                        @endphp
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-tighter {{ $estadoClase }}">
+                            <span class="w-1.5 h-1.5 rounded-full mr-2 {{ $estadoPing }}"></span>
+                            {{ $estadoTexto }}
                         </span>
                     </td>
 
-                        <td class="p-3 flex gap-2">
+                    <!-- Acciones -->
+                    <td class="p-4 text-right"> <!-- Aquí es la clave -->
+                        <div class="inline-flex justify-end gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity flex-wrap">
 
-                           <button wire:click="completarPedido({{ $pedido->id }})" class="btn btn-success bg-green-600 text-white px-2 py-1 rounded">
-                            
-                                Completar
+                            <!-- Completar -->
+                            <button title="Completar" wire:click="completarPedido({{ $pedido->id }})"
+                                class="p-2 bg-green-50 text-green-700 rounded-xl hover:bg-green-600 hover:text-white transition-all flex items-center">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M5 13l4 4L19 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
                             </button>
 
-                          <button wire:click="confirmarRechazo({{ $pedido->id }})" 
-                                class="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">
-                                Rechazar
+                            <!-- Rechazar -->
+                            <button title="Rechazar" wire:click="confirmarRechazo({{ $pedido->id }})"
+                                class="p-2 bg-red-50 text-red-700 rounded-xl hover:bg-red-600 hover:text-white transition-all flex items-center">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
                             </button>
 
-                            <button 
-                                class="bg-blue-500 text-white px-2 py-1 rounded"
-                                wire:click="abrirModalMail({{ $pedido->id }})">
-                                Email
+                            <!-- Email -->
+                            <button title="Enviar Email" wire:click="abrirModalMail({{ $pedido->id }})"
+                                class="p-2 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-600 hover:text-white transition-all flex items-center">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
                             </button>
 
-                        </td>
+                        </div>
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="8" class="p-12 text-center text-gray-400">
+                        <div class="flex flex-col items-center">
+                            <svg class="h-10 w-10 mb-3 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                            </svg>
+                            <span class="font-medium uppercase tracking-widest text-xs">No hay pedidos registrados</span>
+                        </div>
+                    </td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+</div>
 
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="8" class="text-center p-6 text-gray-500">
-                            No hay pedidos registrados
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-
-        </table>
-    </div>
 {{-- Botón Toggle General --}}
 <div class="mt-6">
     <button 

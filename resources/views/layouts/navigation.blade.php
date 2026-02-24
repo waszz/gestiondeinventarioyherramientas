@@ -20,6 +20,24 @@
 
                         {{-- Admin y Supervisor --}}
                         @if($user && ($user->role === 'admin' || $user->role === 'supervisor'))
+
+
+                                                                      <!-- Inventario -->
+                            <div x-data="{ openLicencias: false }" class="relative">
+                                <x-nav-link href="#" @click.prevent="openLicencias = !openLicencias"
+                                    class="cursor-pointer flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white">
+                                    CIH
+                                    <svg :class="{'rotate-180': openLicencias}" class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </x-nav-link>
+
+                                <div x-show="openLicencias" @click.outside="openLicencias = false" x-transition
+                                    class="absolute mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow z-50">
+                                    <a href="{{ route('panol.materiales') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-200">Materiales</a>
+                                    <a href="{{ route('panol.herramientas') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-200">Herramientas</a>
+                                </div>
+                            </div>
                             <!-- Administración -->
                             <div x-data="{ openAdmin: false }" class="relative">
                                 <x-nav-link href="#" @click.prevent="openAdmin = !openAdmin" 
@@ -57,22 +75,7 @@
                                     
                                 </div>
                             </div>
-                                                <!-- Licencias -->
-<div x-data="{ openLicencias: false }" class="relative">
-    <x-nav-link href="#" @click.prevent="openLicencias = !openLicencias"
-        class="cursor-pointer flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white">
-        CIH
-        <svg :class="{'rotate-180': openLicencias}" class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-        </svg>
-    </x-nav-link>
-
-    <div x-show="openLicencias" @click.outside="openLicencias = false" x-transition
-         class="absolute mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow z-50">
-         <a href="{{ route('panol.materiales') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-200">Materiales</a>
-         <a href="{{ route('panol.herramientas') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-200">Herramientas</a>
-    </div>
-</div>
+  
                         @endif
                     @endauth
                 </div>
