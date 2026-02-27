@@ -27,6 +27,96 @@
         </button>
     </div>
 
+ {{-- Importación --}}
+<div class="flex bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
+
+    <input type="file"
+           wire:model="archivoImportacion"
+           class="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full">
+
+    <button wire:click="importarHerramientas"
+            class="bg-gray-800 text-white px-4 py-2 rounded-xl hover:bg-black transition-colors">
+
+        <svg class="w-5 h-5"
+             fill="none"
+             stroke="currentColor"
+             viewBox="0 0 24 24">
+            <path stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+        </svg>
+
+    </button>
+
+</div>
+
+@if($columnasDetectadas)
+
+<div class="bg-white shadow-lg rounded-2xl p-6 border border-gray-200 space-y-4">
+
+    <h3 class="text-lg font-semibold mb-2">
+        Configurar Columnas
+    </h3>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        @foreach([
+            'Nombre'          => 'columnaNombre',
+            'Código'          => 'columnaCodigo',
+            'GCI Código'      => 'columnaGci',
+            'Alimentación'    => 'columnaAlimentacion',
+            'Cantidad Total'  => 'columnaCantidad',
+        ] as $label => $model)
+
+        <div>
+            <label class="block text-sm font-medium mb-1">
+                {{ $label }}
+
+                {{-- Obligatorios --}}
+                @if(in_array($model, ['columnaNombre','columnaCodigo','columnaCantidad']))
+                    <span class="text-red-500">*</span>
+                @endif
+            </label>
+
+            <select wire:model="{{ $model }}"
+                class="w-full border p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+
+                <option value="">Seleccionar columna</option>
+
+                @foreach($columnasDetectadas as $col)
+                    <option value="{{ $col }}">
+                        {{ $col }}
+                    </option>
+                @endforeach
+
+            </select>
+        </div>
+
+        @endforeach
+
+    </div>
+
+    {{-- Error de duplicados --}}
+    @error('duplicado')
+        <span class="text-red-500 text-sm block">
+            {{ $message }}
+        </span>
+    @enderror
+
+    <div class="flex justify-end mt-4">
+        <button wire:click="importarHerramientas"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl shadow font-semibold transition">
+
+            Importar Herramientas
+
+        </button>
+    </div>
+
+</div>
+
+@endif
+
     <div class="flex flex-wrap gap-4 items-center mb-6">
         <input type="text" wire:model.live="buscar" placeholder="Buscar por nombre o código"
                class="border rounded-2xl px-4 py-2 w-full sm:w-1/3 focus:ring-2 focus:ring-blue-500 transition">
@@ -90,10 +180,162 @@
             Devolución múltiple
         </button>
     </div>
+<div class="block sm:hidden space-y-4">
+    @forelse($herramientas as $herramienta)
+        <div class="bg-white shadow-lg rounded-2xl p-4 border border-gray-100">
 
-   <div class="bg-white shadow rounded-xl overflow-x-auto">
+            <!-- Header -->
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="font-bold text-gray-800 text-lg">
+                        {{ $herramienta->nombre }}
+                    </h3>
+                    <p class="text-xs text-gray-500 font-mono">
+                        Código: {{ $herramienta->codigo }}
+                    </p>
+                    <p class="text-xs text-gray-500 font-mono">
+                        GCI: {{ $herramienta->gci_codigo }}
+                    </p>
+                </div>
+
+                <div class="text-right">
+                    <div class="text-2xl font-black text-gray-800">
+                        {{ $herramienta->cantidad }}
+                    </div>
+                    <span class="text-xs text-gray-400 uppercase">Total</span>
+                </div>
+            </div>
+
+            <!-- Alimentación -->
+            <div class="mt-3">
+                @if($herramienta->tipo_alimentacion === 'bateria')
+                    <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Batería</span>
+                @elseif($herramienta->tipo_alimentacion === 'cable')
+                    <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold">Cable</span>
+                @else
+                    <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs">Manual</span>
+                @endif
+            </div>
+
+            <!-- Estado -->
+            <div class="mt-4 space-y-2 text-sm">
+
+                <div class="text-green-600 font-semibold">
+                    Disponible: {{ $herramienta->cantidad_disponible }}
+                </div>
+
+                <!-- Préstamo herramientas -->
+                <button wire:click="togglePrestamos({{ $herramienta->id }})"
+                        class="w-full text-left bg-blue-50 rounded-lg px-3 py-2 text-blue-700 font-medium">
+                    En préstamo (herramientas): {{ $herramienta->cantidad_prestamo }}
+                </button>
+
+                <!-- Préstamo baterías -->
+                @php $bateriasActivas = $herramienta->prestamos->where('estado','prestada')->sum('cantidad_baterias'); @endphp
+                <button wire:click="togglePrestamosBaterias({{ $herramienta->id }})"
+                        class="w-full text-left bg-green-50 rounded-lg px-3 py-2 text-green-700 font-medium">
+                    En préstamo (baterías): {{ $bateriasActivas }}
+                </button>
+
+                <!-- Fuera servicio -->
+                <button wire:click="toggleFueraServicio({{ $herramienta->id }})"
+                        class="w-full text-left bg-red-50 rounded-lg px-3 py-2 text-red-700 font-medium">
+                    Fuera de servicio: {{ $herramienta->cantidad_fuera_servicio }}
+                </button>
+
+            </div>
+
+            <!-- Acciones -->
+            <div class="mt-4 grid grid-cols-5 gap-2">
+
+                <button wire:click="abrirModalPrestamo({{ $herramienta->id }})"
+                        class="p-2 bg-green-100 text-green-700 rounded-xl text-xs font-semibold">
+                    +
+                </button>
+
+                @php
+                    $herramientasPendientes = $herramienta->cantidad_prestamo > 0;
+                    $prestamosActivos = $herramienta->prestamos->where('estado', 'prestada');
+                    $bateriasPendientes = $prestamosActivos->sum('cantidad_baterias');
+                    $pendienteDevolver = $herramientasPendientes || $bateriasPendientes > 0;
+                @endphp
+
+                <button wire:click="abrirModalDevolver({{ $herramienta->id }})"
+                        @disabled(!$pendienteDevolver)
+                        class="p-2 bg-blue-100 text-blue-700 rounded-xl text-xs font-semibold disabled:opacity-30">
+                    ↩
+                </button>
+
+                <button wire:click="abrirModalFueraServicio({{ $herramienta->id }})"
+                        class="p-2 bg-red-100 text-red-700 rounded-xl text-xs font-semibold">
+                    ✖
+                </button>
+
+                <button wire:click="abrirModalEditar({{ $herramienta->id }})"
+                        class="p-2 bg-blue-100 text-blue-700 rounded-xl text-xs font-semibold">
+                    ✎
+                </button>
+
+                <button wire:click="abrirModalEliminar({{ $herramienta->id }})"
+                        class="p-2 bg-red-100 text-red-700 rounded-xl text-xs font-semibold">
+                    🗑
+                </button>
+
+            </div>
+        </div>
+    @empty
+        <div class="text-center text-gray-500 py-6">
+            No hay herramientas
+        </div>
+    @endforelse
+</div>
+
+
+<div class="hidden sm:block bg-white shadow rounded-xl overflow-x-auto">
+    @if(count($seleccionados) > 0)
+    <button wire:click="eliminarSeleccionados"
+            class="mb-4 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white transition-all px-4 py-2 rounded-xl shadow font-semibold">
+        Eliminar seleccionados ({{ count($seleccionados) }})
+    </button>
+@endif
     <table class="w-full text-sm table-auto">
         <thead>
+
+            <th class="p-3">
+    <label class="flex items-center gap-3 cursor-pointer group select-none">
+        
+        <div class="relative flex items-center justify-center">
+            <input type="checkbox"
+                   wire:model.live="seleccionarTodos"
+                   class="peer absolute opacity-0 w-5 h-5 cursor-pointer">
+
+            <div class="w-5 h-5 rounded-full
+                        border-2 border-gray-400
+                        transition-all duration-150
+                        group-hover:border-blue-600
+                        peer-checked:bg-blue-600
+                        peer-checked:border-blue-600
+                        peer-checked:[&>svg]:opacity-100
+                        flex items-center justify-center">
+
+                <svg class="w-3.5 h-3.5 text-white opacity-0 transition-opacity"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="3.5"
+                     viewBox="0 0 24 24">
+                    <path stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+        </div>
+
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-500 group-hover:text-gray-700 transition-colors">
+            Seleccionar todo
+        </span>
+
+    </label>
+</th>
             <tr class="bg-gray-50/50 border-b border-gray-100">
                 <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">Nombre</th>
                 <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">Código</th>
@@ -106,7 +348,12 @@
         </thead>
         <tbody class="divide-y divide-gray-200">
             @forelse($herramientas as $herramienta)
-                <tr class="hover:bg-blue-50/40 transition-colors group">
+                <tr 
+    wire:key="herramienta-{{ $herramienta->id }}"
+    class="transition-colors
+           {{ in_array($herramienta->id, $seleccionados) 
+              ? 'bg-blue-50 border-l-4 border-blue-500' 
+              : 'hover:bg-blue-50/40' }}">
                     <td class="p-3 text-center font-bold text-gray-800">{{ $herramienta->nombre }}</td>
                     <td class="p-3 text-center font-mono text-gray-600">{{ $herramienta->codigo }}</td>
                     <td class="p-3 text-center font-mono text-gray-600">{{ $herramienta->gci_codigo }}</td>
@@ -206,6 +453,30 @@
                             </button>
                         </div>
                     </td>
+  <td class="p-3 text-center">
+    <label class="relative flex justify-center items-center cursor-pointer group">
+        
+        <input type="checkbox"
+               value="{{ $herramienta->id }}"
+               wire:model.live="seleccionados"
+               class="peer absolute opacity-0 w-5 h-5 cursor-pointer">
+
+        <div class="w-5 h-5 rounded-full border-2 border-gray-400
+                    flex items-center justify-center transition-all duration-150
+                    group-hover:border-blue-600
+                    peer-checked:bg-blue-600 
+                    peer-checked:border-blue-600
+                    peer-checked:[&>svg]:opacity-100"> <svg class="w-3.5 h-3.5 text-white opacity-0 transition-opacity"
+                 fill="none"
+                 stroke="currentColor"
+                 stroke-width="3.5"
+                 viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+
+        </div>
+    </label>
+</td> 
                 </tr>
             @empty
                 <tr>

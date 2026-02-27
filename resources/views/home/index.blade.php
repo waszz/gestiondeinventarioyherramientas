@@ -2,23 +2,27 @@
 @auth
   <!-- Bienvenida con GSAP -->
 <div id="bienvenida" class="flex flex-col items-center justify-center mt-20 text-center">
-    <!-- Título -->
-    <h1 class="text-5xl font-extrabold text-gray-800 dark:text-gray-200 mb-6 tracking-wide">
-        ¡Bienvenido, {{ Auth::user()->name }}!
-    </h1>
 
-    <!-- Logo desde asset -->
-    <div class="mb-8">
-        <img id="logo" src="{{ asset('images/española.png') }}" 
-             alt="Logo" class="h-56 w-auto mx-auto drop-shadow-lg" />
-    </div>
+   <!-- Logo -->
+<div class="mb-1">
+    <img id="logo" 
+         src="{{ asset('images/logoempresa.png') }}" 
+         alt="Logo" 
+         class="h-40 md:h-44 w-auto mx-auto drop-shadow-lg" />
+</div>
+
+<!-- Título -->
+<h1 class="text-4xl md:text-5xl font-extrabold text-gray-800 dark:text-gray-200 mb-4 tracking-wide">
+    ¡Bienvenido, {{ Auth::user()->name }}!
+</h1>
+    
 
     <!-- Botón solo para admin o supervisor -->
     @if(in_array(Auth::user()->role, ['admin', 'supervisor']))
         <a href="{{ route('panol.materiales') }}"
            id="btn-entrar"
-           class="px-6 py-3 text-lg font-semibold text-white rounded-xl shadow-lg 
-                  bg-[#04a6e7] hover:bg-[#069dda] transition">
+           class="px-6 py-3 mt-8 text-lg font-semibold text-white rounded-xl shadow-lg 
+                  bg-[#04a6e7] hover:bg-[#069dda]">
             Entrar al Sistema de Inventario
         </a>
     @endif
@@ -98,14 +102,14 @@
                 ease: "power3.out" 
             });
 
-            // Animación del logo PNG
-            gsap.from("#logo", { 
-                duration: 1.2, 
-                scale: 0, 
-                opacity: 0, 
-                delay: 0.5, 
-                ease: "elastic.out(1, 0.5)" 
-            });
+            // // Animación del logo PNG
+            // gsap.from("#logo", { 
+            //     duration: 1.2, 
+            //     scale: 0, 
+            //     opacity: 0, 
+            //     delay: 0.5, 
+            //     ease: "elastic.out(1, 0.5)" 
+            // });
 
             // Animación del botón
             gsap.fromTo("#btn-entrar",

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Panol;
 
+use App\Imports\HerramientasImport;
 use App\Models\Bateria;
 use App\Models\FueraServicio;
 use App\Models\Funcionario;
@@ -12,9 +13,15 @@ use App\Models\Pedido;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
+use Livewire\WithFileUploads;
+use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class HerramientasIndex extends Component
 {
+
+    use WithFileUploads;
+    
     public $buscar = '';
     public $herramientaSeleccionada;
     public $cantidadPrestamo = 1;
@@ -68,8 +75,105 @@ class HerramientasIndex extends Component
     public $bateriasDevolucionesMultiple = [];
     public $mostrarPrestamosBaterias = [];
     public $gciPedidoHerramienta;
+    public $seleccionados = [];
+    public $seleccionarTodos = false;
+     public $archivoImportacion;
+
+    public $columnasDetectadas = [];
+    public $columnaNombre;
+    public $columnaCodigo;
+    public $columnaGci;
+    public $columnaAlimentacion;
+    public $columnaCantidad;
     protected $listeners = ['refreshHerramientas' => '$refresh'];
 
+
+
+public function updatedArchivoImportacion()
+{
+    $data = Excel::toArray([], $this->archivoImportacion);
+
+    if (!isset($data[0][0])) return;
+
+    $this->columnasDetectadas = array_keys($data[0][0]);
+}
+
+public function importarHerramientas()
+{
+    $this->resetErrorBag();
+
+    $columnas = [
+        'columnaNombre'        => $this->columnaNombre,
+        'columnaCodigo'        => $this->columnaCodigo,
+        'columnaGci'           => $this->columnaGci,
+        'columnaAlimentacion'  => $this->columnaAlimentacion,
+        'columnaCantidad'      => $this->columnaCantidad,
+    ];
+
+    $this->validate([
+        'archivoImportacion' => 'required|file|mimes:csv,xlsx',
+        'columnaNombre'      => 'required',
+        'columnaCodigo'      => 'required',
+        'columnaCantidad'    => 'required',
+    ]);
+
+    // Validar columnas duplicadas
+    $filtrados = array_filter($columnas, fn($v) => $v !== null && $v !== '');
+
+    if (count($filtrados) !== count(array_unique($filtrados))) {
+        $this->addError('duplicado', 'No puedes seleccionar la misma columna para campos diferentes.');
+        return;
+    }
+
+    try {
+
+        Excel::import(
+            new HerramientasImport(
+                $this->columnaNombre,
+                $this->columnaCodigo,
+                $this->columnaGci,
+                $this->columnaAlimentacion,
+                $this->columnaCantidad
+            ),
+            $this->archivoImportacion
+        );
+
+        $this->reset([
+            'archivoImportacion',
+            'columnaNombre',
+            'columnaCodigo',
+            'columnaGci',
+            'columnaAlimentacion',
+            'columnaCantidad',
+            'columnasDetectadas'
+        ]);
+
+        session()->flash('success', 'Herramientas importadas correctamente.');
+        $this->dispatch('reload-page');
+
+    } catch (\Exception $e) {
+        $this->addError('archivoImportacion', 'Error: ' . $e->getMessage());
+    }
+}
+
+public function updatedSeleccionarTodos($value)
+{
+    if ($value) {
+        $this->seleccionados = Herramienta::pluck('id')->toArray();
+    } else {
+        $this->seleccionados = [];
+    }
+}
+
+public function eliminarSeleccionados()
+{
+    Herramienta::whereIn('id', $this->seleccionados)->delete();
+
+    $this->seleccionados = [];
+    $this->seleccionarTodos = false;
+
+    session()->flash('success', 'Herramientas eliminadas correctamente');
+}
 
 public function togglePrestamosBaterias($herramientaId)
 {

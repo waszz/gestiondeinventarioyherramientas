@@ -26,7 +26,7 @@
                             <div x-data="{ openLicencias: false }" class="relative">
                                 <x-nav-link href="#" @click.prevent="openLicencias = !openLicencias"
                                     class="cursor-pointer flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white">
-                                    CIH
+                                    M&H
                                     <svg :class="{'rotate-180': openLicencias}" class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                     </svg>
@@ -128,6 +128,30 @@
                 @php $user = auth()->user(); @endphp
                 {{-- Admin y Supervisor --}}
                 @if($user && ($user->role === 'admin' || $user->role === 'supervisor'))
+
+                <!-- M&H Mobile -->
+                    <div x-data="{ openMHMobile: false }" class="px-4 mt-1">
+                        <button @click="openMHMobile = !openMHMobile"
+                            class="w-full text-left text-gray-700 dark:text-gray-200 py-2 flex justify-between items-center">
+                            M&H
+                            <svg :class="{ 'rotate-180': openMHMobile }"
+                                class="w-4 h-4 transition-transform duration-300"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div x-show="openMHMobile" x-transition class="pl-4">
+                            <x-responsive-nav-link :href="route('panol.materiales')" class="dark:text-gray-200">
+                                Materiales
+                            </x-responsive-nav-link>
+
+                            <x-responsive-nav-link :href="route('panol.herramientas')" class="dark:text-gray-200">
+                                Herramientas
+                            </x-responsive-nav-link>
+                        </div>
+                    </div>
                     <!-- Administración Mobile -->
                     <div x-data="{ openAdminMobile: false }" class="px-4">
                         <button @click="openAdminMobile = !openAdminMobile" class="w-full text-left text-gray-700 dark:text-gray-200 py-2 flex justify-between items-center">
@@ -137,10 +161,11 @@
                             </svg>
                         </button>
                         <div x-show="openAdminMobile" class="pl-4">
-                            <x-responsive-nav-link :href="route('posts.index')" class="dark:text-gray-200">Planillas</x-responsive-nav-link>
+                            {{-- <x-responsive-nav-link :href="route('posts.index')" class="dark:text-gray-200">Planillas</x-responsive-nav-link>
                             <x-responsive-nav-link :href="route('posts.create')" class="dark:text-gray-200">Crear Planillas</x-responsive-nav-link>
-                            <x-responsive-nav-link :href="route('planillas.generar')" class="dark:text-gray-200">Generar Planilla</x-responsive-nav-link>
+                            <x-responsive-nav-link :href="route('planillas.generar')" class="dark:text-gray-200">Generar Planilla</x-responsive-nav-link> --}}
                             <x-responsive-nav-link :href="route('funcionarios.index')" class="dark:text-gray-200">Funcionarios</x-responsive-nav-link>
+                            <x-responsive-nav-link :href="route('reportes.index')" class="dark:text-gray-200">Reportes</x-responsive-nav-link>
                         </div>
                     </div>
 
@@ -153,8 +178,9 @@
                             </svg>
                         </button>
                         <div x-show="openComprasMobile" class="pl-4">
-                         <x-responsive-nav-link :href="route('compras.create')" class="dark:text-gray-200">Crear Compras</x-responsive-nav-link>
-                         <x-responsive-nav-link :href="route('compras.index')" class="dark:text-gray-200">Ver Compras</x-responsive-nav-link>
+                         {{-- <x-responsive-nav-link :href="route('compras.create')" class="dark:text-gray-200">Crear Compras</x-responsive-nav-link>
+                         <x-responsive-nav-link :href="route('compras.index')" class="dark:text-gray-200">Ver Compras</x-responsive-nav-link> --}}
+                         <x-responsive-nav-link :href="route('panol.pedidos')" class="dark:text-gray-200">Ver Pedidos</x-responsive-nav-link>
                          
                         </div>
                     </div>

@@ -136,22 +136,72 @@
     {{-- VISTA ESCRITORIO (TABLA) --}}
 
 <div class="hidden md:block bg-white shadow-xl shadow-gray-200/50 rounded-3xl overflow-hidden border border-gray-100">
+    @if(count($seleccionados) > 0)
+    <button wire:click="eliminarSeleccionados"
+            class="bg-red-50 text-red-700  hover:bg-red-600 hover:text-white transition-all  px-4 py-2 rounded-lg shadow ">
+        Eliminar seleccionados ({{ count($seleccionados) }})
+    </button>
+@endif
     <table class="w-full text-left border-collapse">
         <thead>
-            <tr class="bg-gray-50/50 border-b border-gray-100">
-                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">Material</th>
-                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">Tipo</th>
-                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">Código</th>
-                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">GCI</th>
-                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Stock</th>
-                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Mínimo</th>
-                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Estado</th>
-                <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Acciones</th>
-            </tr>
+  <th class="p-3">
+    <label class="flex items-center gap-3 cursor-pointer group select-none">
+        
+        <div class="relative flex items-center justify-center">
+            <input type="checkbox"
+                   wire:model.live="seleccionarTodos"
+                   class="peer absolute opacity-0 w-5 h-5 cursor-pointer">
+
+            <div class="w-5 h-5 rounded-full
+                        border-2 border-gray-400
+                        transition-all duration-150
+                        group-hover:border-blue-600
+                        peer-checked:bg-blue-600
+                        peer-checked:border-blue-600
+                        peer-checked:[&>svg]:opacity-100
+                        flex items-center justify-center">
+
+                <svg class="w-3.5 h-3.5 text-white opacity-0 transition-opacity"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="3.5"
+                     viewBox="0 0 24 24">
+                    <path stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+        </div>
+
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-500 group-hover:text-gray-700 transition-colors">
+            Seleccionar todo
+        </span>
+
+    </label>
+</th>
+           <tr class="bg-gray-50/50 border-b border-gray-100">
+    <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">Material</th>
+    <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">Tipo</th>
+    <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">Código</th>
+    <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest">GCI</th>
+    <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Stock</th>
+    <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Mínimo</th>
+    <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Esencial</th> 
+    <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Estado</th>
+    <th class="p-4 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Acciones</th>
+</tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
             @forelse($materiales as $material)
-                <tr wire:key="material-row-{{ $material->id }}" class="hover:bg-blue-50/40 transition-colors group">
+    
+                <tr 
+    wire:key="material-row-{{ $material->id }}"
+    @class([
+        'transition-colors duration-150 group',
+        'bg-blue-50 border-l-4 border-blue-600' => in_array($material->id, $seleccionados),
+        'hover:bg-blue-50/40' => !in_array($material->id, $seleccionados),
+    ])
+>
                     <td class="p-4 font-bold text-gray-800">{{ $material->nombre }}</td>
 <td class="p-3">
     <select 
@@ -172,12 +222,21 @@
                     <td class="p-4 font-mono text-gray-600">{{ $material->gci_codigo ?? '---' }}</td>
                     <td class="p-4 text-center font-black {{ $material->stock_actual <= $material->stock_minimo ? 'text-red-600' : 'text-gray-700' }}">{{ $material->stock_actual }}</td>
                     <td class="p-4 text-center text-gray-400 font-bold">{{ $material->stock_minimo }}</td>
+ <td class="p-4 text-center">
+    <button 
+        wire:click="toggleEsencial({{ $material->id }})" 
+        class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-tighter transition-colors
+            {{ $material->material_esencial ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200' }}">
+        {{ $material->material_esencial ? 'Esencial' : 'Normal' }}
+    </button>
+</td>
                     <td class="p-4 text-center">
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-tighter {{ $material->stock_actual <= $material->stock_minimo ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700' }}">
                             <span class="w-1.5 h-1.5 rounded-full mr-2 {{ $material->stock_actual <= $material->stock_minimo ? 'bg-red-500 animate-ping' : 'bg-green-500' }}"></span>
                             {{ $material->stock_actual <= $material->stock_minimo ? 'Crítico' : 'Óptimo' }}
                         </span>
                     </td>
+                    
                     <td class="p-4">
                         <div class="flex justify-end gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity flex-wrap">
                             <button title="Ingreso" wire:click="abrirModalIngreso({{ $material->id }})" class="p-2 bg-green-50 text-green-700 rounded-xl hover:bg-green-600 hover:text-white transition-all"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"></path></svg></button>
@@ -203,6 +262,31 @@
                             <button title="Eliminar" wire:click="abrirModalEliminarMaterial({{ $material->id }})" class="p-2 bg-red-50 text-red-700 rounded-xl hover:bg-red-600 hover:text-white transition-all"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                         </div>
                     </td>
+
+<td class="p-3 text-center">
+    <label class="relative flex justify-center items-center cursor-pointer group">
+        
+        <input type="checkbox"
+               value="{{ $material->id }}"
+               wire:model.live="seleccionados"
+               class="peer absolute opacity-0 w-5 h-5 cursor-pointer">
+
+        <div class="w-5 h-5 rounded-full border-2 border-gray-400
+                    flex items-center justify-center transition-all duration-150
+                    group-hover:border-blue-600
+                    peer-checked:bg-blue-600 
+                    peer-checked:border-blue-600
+                    peer-checked:[&>svg]:opacity-100"> <svg class="w-3.5 h-3.5 text-white opacity-0 transition-opacity"
+                 fill="none"
+                 stroke="currentColor"
+                 stroke-width="3.5"
+                 viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+
+        </div>
+    </label>
+</td>          
                 </tr>
             @empty
                 <tr>

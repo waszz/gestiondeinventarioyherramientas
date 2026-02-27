@@ -160,6 +160,85 @@
         </div>
     </div>
 
+    <div class="block md:hidden space-y-4">
+    @forelse($pedidos as $pedido)
+
+        @php
+            $estadoClase = match(strtolower($pedido->estado)) {
+                'pendiente' => 'bg-orange-100 text-orange-700',
+                'completado' => 'bg-green-100 text-green-700',
+                'rechazado' => 'bg-red-100 text-red-700',
+                default => 'bg-gray-100 text-gray-700'
+            };
+
+            $estadoPing = match(strtolower($pedido->estado)) {
+                'pendiente' => 'bg-orange-500 animate-ping',
+                'completado' => 'bg-green-500',
+                'rechazado' => 'bg-red-500',
+                default => 'bg-gray-500'
+            };
+
+            $estadoTexto = ucfirst($pedido->estado);
+        @endphp
+
+        <div class="bg-white shadow-lg rounded-2xl p-4 border border-gray-100">
+
+            <!-- Header -->
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="font-bold text-gray-800 text-lg">
+                        {{ $pedido->nombre }}
+                    </h3>
+                    <p class="text-xs text-gray-500 font-mono">
+                        {{ $pedido->created_at->format('d/m/Y H:i') }}
+                    </p>
+                </div>
+
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase {{ $estadoClase }}">
+                    <span class="w-1.5 h-1.5 rounded-full mr-2 {{ $estadoPing }}"></span>
+                    {{ $estadoTexto }}
+                </span>
+            </div>
+
+            <!-- Info -->
+            <div class="mt-3 text-sm space-y-1 text-gray-600">
+                <div><span class="font-semibold">Código:</span> {{ $pedido->codigo ?? '---' }}</div>
+                <div><span class="font-semibold">SKU:</span> {{ $pedido->sku ?? '---' }}</div>
+                <div><span class="font-semibold">Seguimiento:</span> {{ $pedido->numero_seguimiento ?? '---' }}</div>
+                <div><span class="font-semibold">Cantidad:</span> 
+                    <span class="font-black text-gray-800">{{ $pedido->cantidad }}</span>
+                </div>
+            </div>
+
+            <!-- Acciones -->
+            <div class="mt-4 grid grid-cols-3 gap-2">
+
+                <button wire:click="completarPedido({{ $pedido->id }})"
+                    class="p-2 bg-green-100 text-green-700 rounded-xl text-xs font-semibold">
+                    ✔ Completar
+                </button>
+
+                <button wire:click="confirmarRechazo({{ $pedido->id }})"
+                    class="p-2 bg-red-100 text-red-700 rounded-xl text-xs font-semibold">
+                    ✖ Rechazar
+                </button>
+
+                <button wire:click="abrirModalMail({{ $pedido->id }})"
+                    class="p-2 bg-blue-100 text-blue-700 rounded-xl text-xs font-semibold">
+                    ✉ Email
+                </button>
+
+            </div>
+
+        </div>
+
+    @empty
+        <div class="text-center text-gray-400 py-10">
+            No hay pedidos registrados
+        </div>
+    @endforelse
+</div>
+
 <div class="hidden md:block bg-white shadow-xl shadow-gray-200/50 rounded-3xl overflow-hidden border border-gray-100">
     <table class="w-full text-left border-collapse">
         <thead>

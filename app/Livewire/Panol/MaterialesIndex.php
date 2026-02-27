@@ -65,9 +65,45 @@ class MaterialesIndex extends Component
     public $columnaStockMinimo;
     public $mostrarConfiguracion = false;
     public $filtroEstado; // 'critico' o 'optimo' o null
+    public $seleccionados = [];
+    public $seleccionarTodos = false;
     protected $listeners = ['refreshMaterial' => '$refresh'];
 
+public function updatedSeleccionados()
+{
+    $total = Material::count();
 
+    $this->seleccionarTodos = count($this->seleccionados) === $total;
+}
+
+    public function updatedSeleccionarTodos($valor)
+{
+    if ($valor) {
+        $this->seleccionados = Material::pluck('id')->toArray();
+    } else {
+        $this->seleccionados = [];
+    }
+}
+
+public function eliminarSeleccionados()
+{
+    if (empty($this->seleccionados)) {
+        session()->flash('error', 'No hay materiales seleccionados.');
+        return;
+    }
+
+    // Eliminar movimientos relacionados
+    MovimientoMaterial::whereIn('material_id', $this->seleccionados)->delete();
+
+    // Eliminar materiales
+    Material::whereIn('id', $this->seleccionados)->delete();
+
+    $this->seleccionados = [];
+    $this->seleccionarTodos = false;
+
+    session()->flash('success', 'Materiales eliminados correctamente.');
+    $this->dispatch('reload-page');
+}
 
 public function cambiarTipoMaterial($materialId, $nuevoTipo)
 {
