@@ -298,6 +298,7 @@
         Eliminar seleccionados ({{ count($seleccionados) }})
     </button>
 @endif
+<div class="max-h-[600px] overflow-y-auto rounded-b-3xl">
     <table class="w-full text-sm table-auto">
         <thead>
 
@@ -380,6 +381,22 @@
                                 </button>
                             </div>
 
+                            @if(isset($mostrarPrestamos[$herramienta->id]))
+                                <div class="w-full bg-blue-100 rounded-lg p-2 text-xs mt-1">
+                                    @forelse($herramienta->prestamos->where('estado','prestada') as $prestamo)
+                                        <div class="flex justify-between border-b border-blue-200 pb-1">
+                                            <span class="font-semibold">
+                                                {{ $prestamo->funcionario->nombre ?? 'Sin nombre' }}
+                                                {{ $prestamo->funcionario->apellido ?? '' }}
+                                            </span>
+                                            <span>{{ $prestamo->cantidad }}</span>
+                                        </div>
+                                    @empty
+                                        <div class="text-gray-500">No hay préstamos activos</div>
+                                    @endforelse
+                                </div>
+                            @endif
+
                             {{-- En préstamo baterías --}}
                             <div class="text-green-600 w-full text-center">
                                 <button wire:click="togglePrestamosBaterias({{ $herramienta->id }})" 
@@ -389,6 +406,22 @@
                                     <span>@if(isset($mostrarPrestamosBaterias[$herramienta->id])) &#9650; @else &#9660; @endif</span>
                                 </button>
                             </div>
+
+                            @if(isset($mostrarPrestamosBaterias[$herramienta->id]))
+                                <div class="w-full bg-green-100 rounded-lg p-2 text-xs mt-1">
+                                    @forelse($herramienta->prestamos->where('estado','prestada')->where('cantidad_baterias','>',0) as $prestamo)
+                                        <div class="flex justify-between border-b border-green-200 pb-1">
+                                            <span class="font-semibold">
+                                                {{ $prestamo->funcionario->nombre ?? 'Sin nombre' }}
+                                                {{ $prestamo->funcionario->apellido ?? '' }}
+                                            </span>
+                                            <span>{{ $prestamo->cantidad_baterias }}</span>
+                                        </div>
+                                    @empty
+                                        <div class="text-gray-500">No hay baterías prestadas</div>
+                                    @endforelse
+                                </div>
+                            @endif
 
                             {{-- Fuera de servicio --}}
                             <div class="text-red-600 w-full text-center">
@@ -485,6 +518,7 @@
             @endforelse
         </tbody>
     </table>
+</div>
 </div>
 
    <!-- ========================== BOTONES PRINCIPALES ========================== -->

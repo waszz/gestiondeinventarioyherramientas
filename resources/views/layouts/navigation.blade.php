@@ -55,6 +55,10 @@
                                     <a href="{{ route('planillas.generar') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-200">Generar Planilla</a> --}}
                                     <a href="{{ route('funcionarios.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-200">Funcionarios</a>
                                     <a href="{{ route('reportes.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-200">Reportes</a>
+                                     <a href="{{ route('tickets.index') }}" 
+                                        class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-200">
+                                            Seguimiento / Tickets
+                                    </a>
                                 </div>
                             </div>
 

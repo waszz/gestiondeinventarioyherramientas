@@ -69,6 +69,12 @@ class MaterialesIndex extends Component
     public $seleccionarTodos = false;
     protected $listeners = ['refreshMaterial' => '$refresh'];
 
+
+
+public function filtrarCriticos()
+{
+    $this->filtroEstado = $this->filtroEstado === 'critico' ? '' : 'critico';
+}
 public function updatedSeleccionados()
 {
     $total = Material::count();
@@ -465,8 +471,8 @@ public function guardarPedidoMaterial()
     $this->materialTienePedidoPendiente = true;
     $this->mostrarModalPedido = false;
 
-    $this->dispatch('reload-page');
     session()->flash('success', 'Pedido generado correctamente');
+    $this->dispatch('reload-page');
 }
 
     /*
@@ -621,6 +627,10 @@ public function guardarRetiro()
     'ticket' => $this->ticketRetiro,
     'funcionario_id' => $this->funcionario_id,
 ]);
+
+// Cambiar funcionario a NO DISPONIBLE
+Funcionario::where('id', $this->funcionario_id)
+    ->update(['estado' => 'no_disponible']);
 
     // cerrar modal
     $this->mostrarModalRetiro = false;

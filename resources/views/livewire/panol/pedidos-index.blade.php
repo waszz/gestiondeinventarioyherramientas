@@ -240,6 +240,7 @@
 </div>
 
 <div class="hidden md:block bg-white shadow-xl shadow-gray-200/50 rounded-3xl overflow-hidden border border-gray-100">
+    <div class="max-h-[600px] overflow-y-auto rounded-b-3xl">
     <table class="w-full text-left border-collapse">
         <thead>
             <tr class="bg-gray-50/50 border-b border-gray-100">
@@ -344,6 +345,10 @@
         </tbody>
     </table>
 </div>
+</div>
+
+
+
 
 {{-- Botón Toggle General --}}
 <div class="mt-6">
@@ -397,7 +402,20 @@
                 <tbody>
                     @forelse($pedidosHerramientasCompletados as $pedido)
                         <tr class="border-b hover:bg-gray-50">
-                            <td class="p-3">{{ $pedido->updated_at->format('d/m/Y H:i') }}</td>
+                            <td class="p-3">
+    <div class="text-xs text-gray-500">
+        <div>
+            <span class="font-semibold">Creado:</span> 
+            {{ $pedido->created_at->format('d/m/Y H:i') }}
+        </div>
+        <div>
+            <span class="font-semibold">
+                {{ $historialActivo === 'completados' ? 'Completado:' : 'Rechazado:' }}
+            </span>
+            {{ $pedido->updated_at->format('d/m/Y H:i') }}
+        </div>
+    </div>
+</td>
                             <td class="p-3">{{ $pedido->nombre }}</td>
                             <td class="p-3">{{ $pedido->cantidad }}</td>
                             <td class="p-3">{{ $pedido->numero_seguimiento ?? '---' }}</td>
@@ -426,7 +444,20 @@
                 <tbody>
                     @forelse($pedidosMaterialesCompletados as $pedido)
                         <tr class="border-b hover:bg-gray-50">
-                            <td class="p-3">{{ $pedido->updated_at->format('d/m/Y H:i') }}</td>
+                           <td class="p-3">
+    <div class="text-xs text-gray-500">
+        <div>
+            <span class="font-semibold">Creado:</span> 
+            {{ $pedido->created_at->format('d/m/Y H:i') }}
+        </div>
+        <div>
+            <span class="font-semibold">
+                {{ $historialActivo === 'completados' ? 'Completado:' : 'Rechazado:' }}
+            </span>
+            {{ $pedido->updated_at->format('d/m/Y H:i') }}
+        </div>
+    </div>
+</td>
                             <td class="p-3">{{ $pedido->nombre }}</td>
                             <td class="p-3">{{ $pedido->cantidad }}</td>
                             <td class="p-3">{{ $pedido->numero_seguimiento ?? '---' }}</td>
@@ -455,7 +486,20 @@
                 <tbody>
                     @forelse($pedidosHerramientasRechazados as $pedido)
                         <tr class="border-b hover:bg-gray-50">
-                            <td class="p-3">{{ $pedido->updated_at->format('d/m/Y H:i') }}</td>
+                            <td class="p-3">
+    <div class="text-xs text-gray-500">
+        <div>
+            <span class="font-semibold">Creado:</span> 
+            {{ $pedido->created_at->format('d/m/Y H:i') }}
+        </div>
+        <div>
+            <span class="font-semibold">
+                {{ $historialActivo === 'completados' ? 'Completado:' : 'Rechazado:' }}
+            </span>
+            {{ $pedido->updated_at->format('d/m/Y H:i') }}
+        </div>
+    </div>
+</td>
                             <td class="p-3">{{ $pedido->nombre }}</td>
                             <td class="p-3">{{ $pedido->cantidad }}</td>
                             <td class="p-3">{{ $pedido->numero_seguimiento ?? '---' }}</td>
@@ -484,7 +528,20 @@
                 <tbody>
                     @forelse($pedidosMaterialesRechazados as $pedido)
                         <tr class="border-b hover:bg-gray-50">
-                            <td class="p-3">{{ $pedido->updated_at->format('d/m/Y H:i') }}</td>
+                           <td class="p-3">
+    <div class="text-xs text-gray-500">
+        <div>
+            <span class="font-semibold">Creado:</span> 
+            {{ $pedido->created_at->format('d/m/Y H:i') }}
+        </div>
+        <div>
+            <span class="font-semibold">
+                {{ $historialActivo === 'completados' ? 'Completado:' : 'Rechazado:' }}
+            </span>
+            {{ $pedido->updated_at->format('d/m/Y H:i') }}
+        </div>
+    </div>
+</td>
                             <td class="p-3">{{ $pedido->nombre }}</td>
                             <td class="p-3">{{ $pedido->cantidad }}</td>
                             <td class="p-3">{{ $pedido->numero_seguimiento ?? '---' }}</td>

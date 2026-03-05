@@ -8,6 +8,7 @@ use Livewire\WithFileUploads;
 use App\Models\Funcionario;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\FuncionariosImport;
+use Illuminate\Support\Facades\DB;
 
 class Funcionarios extends Component
 {
@@ -29,8 +30,11 @@ class Funcionarios extends Component
     public $columnaArea;
     public $columnaTurno;
     public $columnaTelefono;
+    public $seleccionados = [];
+    public $seleccionarTodos = false;
+    public $imagen;
 
-    protected $listeners = ['eliminarFuncionario', 'refreshFuncionario' => '$refresh'];
+    protected $listeners = ['eliminarFuncionario', 'eliminarSeleccionados', 'refreshFuncionario' => '$refresh'];
     protected $paginationTheme = 'tailwind';
 
     public function mount()
@@ -40,6 +44,47 @@ class Funcionarios extends Component
         }
     }
 
+    public function updatedSeleccionados()
+{
+    $total = Funcionario::count();
+
+    $this->seleccionarTodos = count($this->seleccionados) === $total;
+}
+
+public function updatedSeleccionarTodos($valor)
+{
+    if ($valor) {
+        $this->seleccionados = Funcionario::pluck('id')->toArray();
+    } else {
+        $this->seleccionados = [];
+    }
+}
+
+
+public function eliminarSeleccionados()
+{
+    if (empty($this->seleccionados)) {
+        session()->flash('error', 'No hay funcionarios seleccionados.');
+        return;
+    }
+
+    DB::transaction(function () {
+
+        // Si tienen relaciones, eliminarlas primero
+        // Ejemplo:
+        // Prestamo::whereIn('funcionario_id', $this->seleccionados)->delete();
+
+        Funcionario::whereIn('id', $this->seleccionados)->delete();
+    });
+
+    $this->seleccionados = [];
+    $this->seleccionarTodos = false;
+
+    session()->flash('success', 'Funcionarios eliminados correctamente.');
+
+    $this->dispatch('reload-page');
+}
+
     public function updatingSearch()
     {
         $this->resetPage();
@@ -48,7 +93,7 @@ class Funcionarios extends Component
     public function resetForm()
     {
         $this->reset([
-            'numero_funcionario', 'nombre', 'apellido', 'cargo', 'empresa', 'area', 'turno', 'telefono'
+            'numero_funcionario', 'nombre', 'apellido', 'cargo', 'empresa', 'area', 'turno', 'telefono', 'imagen'
         ]);
     }
 
@@ -63,7 +108,14 @@ class Funcionarios extends Component
             'area' => 'required|string',
             'turno' => 'required|string',
             'telefono' => 'required|string|max:20',
+            'imagen' => 'nullable|image|max:2048',
         ]);
+
+        $pathImagen = null;
+
+if ($this->imagen) {
+    $pathImagen = $this->imagen->store('funcionarios', 'public');
+}
 
         Funcionario::create([
             'numero_funcionario' => $this->numero_funcionario,
@@ -74,6 +126,7 @@ class Funcionarios extends Component
             'area' => $this->area,
             'turno' => $this->turno,
             'telefono' => $this->telefono,
+            'imagen' => $pathImagen,
         ]);
 
         session()->flash('message', 'Funcionario creado.');

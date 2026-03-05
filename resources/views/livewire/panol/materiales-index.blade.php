@@ -19,13 +19,24 @@
         </div>
     </div>
 
-    {{-- ALERTAS --}}
-    @if($hayStockBajo)
-        <div class="flex items-center p-4 text-red-800 rounded-2xl bg-red-50 border border-red-100 shadow-sm animate-pulse">
-            <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
-            <span class="text-sm font-bold tracking-wide uppercase">Alerta de Stock Crítico: Revisar inventario.</span>
-        </div>
-    @endif
+   {{-- ALERTAS --}}
+@if($hayStockBajo)
+    <button 
+        wire:click="filtrarCriticos"
+        class="w-full flex items-center p-4 text-red-800 rounded-2xl bg-red-50 border border-red-100 shadow-sm hover:bg-red-100 transition animate-pulse">
+
+        <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                clip-rule="evenodd">
+            </path>
+        </svg>
+
+        <span class="text-sm font-bold tracking-wide uppercase">
+            Alerta de Stock Crítico: Click para ver materiales críticos
+        </span>
+    </button>
+@endif
 
     @if(session()->has('success'))
         <div class="p-4 bg-green-100 text-green-800 rounded-xl shadow">
@@ -142,6 +153,7 @@
         Eliminar seleccionados ({{ count($seleccionados) }})
     </button>
 @endif
+<div class="max-h-[600px] overflow-y-auto rounded-b-3xl">
     <table class="w-full text-left border-collapse">
         <thead>
   <th class="p-3">
@@ -300,6 +312,7 @@
             @endforelse
         </tbody>
     </table>
+     </div>
 </div>
 
 

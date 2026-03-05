@@ -30,6 +30,7 @@ use App\Livewire\Panol\MaterialesIndex;
 use App\Livewire\Panol\PedidosIndex;
 use App\Livewire\PublicPosts;
 use App\Livewire\ReportesIndex;
+use App\Livewire\Tickets;
 use App\Livewire\VerCompras;
 use App\Models\Planilla;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -213,3 +214,7 @@ Route::get('/exportar-materiales-pdf', [ExportController::class, 'materialesPdf'
 
 Route::get('/historial/exportar', [HistorialController::class, 'exportar'])
     ->name('historial.exportar');
+
+    //SEGUIMIENTO
+    
+    Route::get('/tickets', Tickets::class)->name('tickets.index');

@@ -615,6 +615,10 @@ public function prestarHerramientasMultiple()
 
     });
 
+    //Cambiar funcionario a NO DISPONIBLE
+$funcionario = Funcionario::find($this->funcionario_id);
+$funcionario?->cambiarEstadoConHistorial('no_disponible');
+
     $this->mostrarModalPrestamoMultiple = false;
     $this->dispatch('reload-page');
     session()->flash('success', 'Préstamos múltiples realizados correctamente');
@@ -715,11 +719,18 @@ $this->devolucionesMultiple = [];
 $this->bateriasDevolucionesMultiple = [];
 $this->observacionesMultiple = '';
 
-// Refrescar página (si querés)
-$this->dispatch('reload-page');
+$tienePrestamos = HerramientaPrestamo::where('funcionario_id', $funcionario?->id)
+    ->where('estado', 'prestada')
+    ->exists();
+
+if (!$tienePrestamos && $funcionario) {
+    $funcionario->cambiarEstadoConHistorial('disponible');
+}
 
 // Mensaje de éxito
 session()->flash('success', 'Devolución múltiple realizada correctamente.');
+// Refrescar página (si querés)
+$this->dispatch('reload-page');
 }
 
 
@@ -920,7 +931,7 @@ public function prestarHerramienta()
 
     $funcionario = Funcionario::find($this->funcionario_id);
 
-    // 🔥 HISTORIAL CORRECTO
+    //HISTORIAL CORRECTO
     HistorialHerramienta::create([
         'herramienta_id' => $this->herramientaSeleccionada->id,
         'nombre' => $this->herramientaSeleccionada->nombre,
@@ -929,9 +940,16 @@ public function prestarHerramienta()
         'cantidad' => $cantidad,
         'cantidad_baterias' => $cantidadBaterias,
         'funcionario' => $funcionario?->nombre . ' ' . $funcionario?->apellido,
+        'funcionario_id' => $funcionario?->id,
         'detalle' => 'Préstamo individual',
         'observacion' => null,
     ]);
+
+    //CAMBIAR ESTADO
+$funcionario = Funcionario::find($this->funcionario_id);
+$funcionario?->cambiarEstadoConHistorial('no_disponible');
+
+$this->mostrarModalPrestamo = false;
 
     // recién acá reseteás
     $this->cantidadBateriasPrestamo = 0;
@@ -1047,8 +1065,17 @@ public function devolverHerramienta()
     $this->cantidadBateriasDevolucion = 0;
     $this->observacionesDevolucion = null;
 
-    $this->dispatch('reload-page');
+    // Verificar si todavía tiene préstamos activos
+$tienePrestamos = HerramientaPrestamo::where('funcionario_id', $funcionario?->id)
+    ->where('estado', 'prestada')
+    ->exists();
+
+if (!$tienePrestamos && $funcionario) {
+    $funcionario->cambiarEstadoConHistorial('disponible');
+}
+
     session()->flash('success', 'Herramienta y/o batería devuelta correctamente');
+     $this->dispatch('reload-page');
 }
     // Abrir modal fuera de servicio
    public function abrirModalFueraServicio(Herramienta $herramienta)
@@ -1171,9 +1198,9 @@ public function render()
                    ->orWhere('codigo', 'like', '%'.$this->filtroBusqueda.'%');
             })
         )
-        ->when($this->filtroFuncionario, fn($q) =>
-            $q->where('funcionario', 'like', '%'.$this->filtroFuncionario.'%')
-        )
+       ->when($this->filtroFuncionario, fn($q) =>
+    $q->where('funcionario_id', $this->filtroFuncionario)
+)
         ->orderBy('created_at', 'desc')
         ->get();
 

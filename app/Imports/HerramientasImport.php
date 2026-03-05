@@ -75,7 +75,7 @@ class HerramientasImport implements ToModel
     return new Herramienta([
         'nombre' => $nombre,
         'codigo' => $codigo,
-        'gci' => $gci ?: null,
+        'gci_codigo' => $gci ?: null,
         'tipo_alimentacion' => $alimentacion,
 
         // Stock inicial correcto

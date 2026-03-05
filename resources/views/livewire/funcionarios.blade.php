@@ -2,9 +2,9 @@
     <h2 class="text-2xl md:text-3xl font-bold mb-6 text-gray-800 dark:text-gray-200">Gestión de Funcionarios</h2>
 
     <!-- Mensaje flash -->
-    @if(session()->has('message'))
-        <div class="mb-4 p-3 bg-green-100 text-green-800 rounded-md shadow">
-            {{ session('message') }}
+      @if(session()->has('success'))
+        <div class="p-4 bg-green-100 text-green-800 rounded-xl shadow">
+            {{ session('success') }}
         </div>
     @endif
 
@@ -144,6 +144,24 @@
                 </select>
                 @error('turno') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
             </div>
+            <div class="mb-4">
+    <label class="block text-sm font-medium text-gray-700">
+        Imagen del funcionario
+    </label>
+
+    <input type="file" wire:model="imagen"
+           class="mt-1 block w-full border rounded-lg p-2">
+
+    @error('imagen') 
+        <span class="text-red-500 text-sm">{{ $message }}</span> 
+    @enderror
+
+    {{-- Preview --}}
+    @if ($imagen)
+        <img src="{{ $imagen->temporaryUrl() }}"
+             class="w-24 h-24 mt-2 rounded-full object-cover">
+    @endif
+</div>
         </div>
 
         <button type="submit"
@@ -154,23 +172,96 @@
 
     <!-- Tabla responsive -->
     <div class="overflow-x-auto rounded-lg shadow-md">
+   @if(count($seleccionados) > 0)
+    <div class="mb-4">
+        <button wire:click="eliminarSeleccionados"
+                class="bg-red-50 text-red-700 hover:bg-red-600 hover:text-white 
+                       transition-all px-4 py-2 rounded-lg shadow">
+            Eliminar seleccionados ({{ count($seleccionados) }})
+        </button>
+    </div>
+@endif
         <table class="min-w-full border-collapse">
             <thead class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 uppercase text-xs font-semibold tracking-wider">
-                <tr>
-                    <th class="p-4 text-xs font-black text-gray-400 uppercase trackin">N° Cobro</th>
-                    <th class="p-4 text-xs font-black text-gray-400 uppercase trackin">Nombre</th>
-                    <th class="p-4 text-xs font-black text-gray-400 uppercase trackin">Apellido</th>
-                    <th class="p-4 text-xs font-black text-gray-400 uppercase trackin">Tel.</th>
-                    <th class="p-4 text-xs font-black text-gray-400 uppercase trackin">Cargo</th>
-                    <th class="p-4 text-xs font-black text-gray-400 uppercase trackin">Empresa</th>
-                    <th class="p-4 text-xs font-black text-gray-400 uppercase trackin">Área</th>
-                    <th class="p-4 text-xs font-black text-gray-400 uppercase trackin">Turno</th>
-                    <th class="p-4 text-xs font-black text-gray-400 uppercase trackin">Acciones</th>
-                </tr>
-            </thead>
+<tr>
+    <th class="p-3">
+    <label class="flex items-center gap-3 cursor-pointer group select-none">
+
+        <div class="relative flex items-center justify-center">
+            <input type="checkbox"
+                   wire:model.live="seleccionarTodos"
+                   class="peer absolute opacity-0 w-5 h-5 cursor-pointer">
+
+            <div class="w-5 h-5 rounded-full
+                        border-2 border-gray-400
+                        transition-all duration-150
+                        group-hover:border-blue-600
+                        peer-checked:bg-blue-600
+                        peer-checked:border-blue-600
+                        peer-checked:[&>svg]:opacity-100
+                        flex items-center justify-center">
+
+                <svg class="w-3.5 h-3.5 text-white opacity-0 transition-opacity"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="3.5"
+                     viewBox="0 0 24 24">
+                    <path stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+        </div>
+
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-500 
+                     group-hover:text-gray-700 transition-colors">
+            Seleccionar todo
+        </span>
+
+    </label>
+</th>
+    <th class="p-4">N° Cobro</th>
+    <th class="p-4">Nombre</th>
+    <th class="p-4">Apellido</th>
+    <th class="p-4">Tel.</th>
+    <th class="p-4">Cargo</th>
+    <th class="p-4">Empresa</th>
+    <th class="p-4">Área</th>
+    <th class="p-4">Turno</th>
+    <th class="p-4">Acciones</th>
+</tr>
+</thead>
             <tbody class="text-gray-900 dark:text-gray-200 text-sm">
                 @forelse($funcionarios as $f)
                     <tr class="text-center border-b dark:border-gray-600 hover:bg-blue-50/30 transition-colors">
+                        <td class="p-3 text-center">
+    <label class="relative flex justify-center items-center cursor-pointer group">
+        
+        <input type="checkbox"
+               value="{{ $f->id }}"
+               wire:model.live="seleccionados"
+               class="peer absolute opacity-0 w-5 h-5 cursor-pointer">
+
+        <div class="w-5 h-5 rounded-full border-2 border-gray-400
+                    flex items-center justify-center transition-all duration-150
+                    group-hover:border-blue-600
+                    peer-checked:bg-blue-600 
+                    peer-checked:border-blue-600
+                    peer-checked:[&>svg]:opacity-100">
+
+            <svg class="w-3.5 h-3.5 text-white opacity-0 transition-opacity"
+                 fill="none"
+                 stroke="currentColor"
+                 stroke-width="3.5"
+                 viewBox="0 0 24 24">
+                <path stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M5 13l4 4L19 7" />
+            </svg>
+
+        </div>
+    </label>
+</td>
                         <td class="border px-3 py-2">{{ $f->numero_funcionario }}</td>
                         <td class="border px-3 py-2">{{ $f->nombre }}</td>
                         <td class="border px-3 py-2">{{ $f->apellido }}</td>
@@ -190,14 +281,15 @@
     </a>
 
     <!-- Eliminar -->
-    <button wire:click="$dispatch('confirmarEliminacion', { id: {{ $f->id }} })"
+    {{-- <button wire:click="$dispatch('confirmarEliminacion', { id: {{ $f->id }} })"
            class="p-2 bg-red-50 text-red-700 rounded-xl hover:bg-red-600 hover:text-white transition-all flex items-center">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
        
-    </button>
+    </button> --}}
 </td>
+
                     </tr>
                 @empty
                     <tr>
@@ -233,6 +325,24 @@
         if (result.isConfirmed) {
             Livewire.dispatch('eliminarFuncionario', data);
             Swal.fire('Eliminado', 'El funcionario se eliminó correctamente', 'success');
+        }
+    })
+});
+
+Livewire.on('confirmarEliminacionMultiple', () => {
+    Swal.fire({
+        title: '¿Eliminar seleccionados?',
+        text: "No podrás revertir esta acción",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Livewire.dispatch('eliminarSeleccionados');
+            Swal.fire('Eliminados', 'Funcionarios eliminados correctamente', 'success');
         }
     })
 });
