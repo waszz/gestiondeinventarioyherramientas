@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\HistorialEstadoFuncionario;
+use App\Models\Ticket;
 use Illuminate\Database\Eloquent\Model;
 
 class Funcionario extends Model
@@ -23,6 +24,11 @@ class Funcionario extends Model
 public function historialEstados()
 {
     return $this->hasMany(HistorialEstadoFuncionario::class);
+}
+
+public function tickets()
+{
+    return $this->hasMany(Ticket::class);
 }
 
 public function cambiarEstadoConHistorial($estadoNuevo)

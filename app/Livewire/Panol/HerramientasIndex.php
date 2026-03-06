@@ -10,6 +10,7 @@ use App\Models\Herramienta;
 use App\Models\HerramientaPrestamo;
 use App\Models\HistorialHerramienta;
 use App\Models\Pedido;
+use App\Models\Ticket;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -719,14 +720,20 @@ $this->devolucionesMultiple = [];
 $this->bateriasDevolucionesMultiple = [];
 $this->observacionesMultiple = '';
 
-$tienePrestamos = HerramientaPrestamo::where('funcionario_id', $funcionario?->id)
-    ->where('estado', 'prestada')
-    ->exists();
+if ($funcionario) {
 
-if (!$tienePrestamos && $funcionario) {
-    $funcionario->cambiarEstadoConHistorial('disponible');
+    $tienePrestamos = HerramientaPrestamo::where('funcionario_id', $funcionario->id)
+        ->where('estado', 'prestada')
+        ->exists();
+
+    $ticketsAbiertos = Ticket::where('funcionario_id', $funcionario->id)
+        ->where('status', '!=', 'cerrado')
+        ->exists();
+
+    if (!$tienePrestamos && !$ticketsAbiertos) {
+        $funcionario->cambiarEstadoConHistorial('disponible');
+    }
 }
-
 // Mensaje de éxito
 session()->flash('success', 'Devolución múltiple realizada correctamente.');
 // Refrescar página (si querés)
@@ -1066,12 +1073,19 @@ public function devolverHerramienta()
     $this->observacionesDevolucion = null;
 
     // Verificar si todavía tiene préstamos activos
-$tienePrestamos = HerramientaPrestamo::where('funcionario_id', $funcionario?->id)
-    ->where('estado', 'prestada')
-    ->exists();
+if ($funcionario) {
 
-if (!$tienePrestamos && $funcionario) {
-    $funcionario->cambiarEstadoConHistorial('disponible');
+    $tienePrestamos = HerramientaPrestamo::where('funcionario_id', $funcionario->id)
+        ->where('estado', 'prestada')
+        ->exists();
+
+    $ticketsAbiertos = Ticket::where('funcionario_id', $funcionario->id)
+        ->where('status', '!=', 'cerrado')
+        ->exists();
+
+    if (!$tienePrestamos && !$ticketsAbiertos) {
+        $funcionario->cambiarEstadoConHistorial('disponible');
+    }
 }
 
     session()->flash('success', 'Herramienta y/o batería devuelta correctamente');
@@ -1116,7 +1130,7 @@ public function marcarFueraServicio()
         'motivo' => $this->motivoFueraServicio,
     ]);
 
-    // 🔥 HISTORIAL
+    // HISTORIAL
     HistorialHerramienta::create([
         'herramienta_id' => $this->herramientaSeleccionada->id,
         'nombre' => $this->herramientaSeleccionada->nombre,
@@ -1150,7 +1164,7 @@ public function restaurarFueraServicio($id)
     $herramienta->cantidad_fuera_servicio -= $fuera->cantidad;
     $herramienta->save();
 
-    // 🔥 HISTORIAL
+    //  HISTORIAL
     HistorialHerramienta::create([
         'herramienta_id' => $herramienta->id,
         'nombre' => $herramienta->nombre,

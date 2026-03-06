@@ -74,24 +74,36 @@ public function cambiarEstado($ticketId)
         $ticket->status = 'en_proceso';
     }
     elseif($ticket->status == 'en_proceso'){
-        $ticket->status = 'cerrado';
 
-        //  cuando se cierra el ticket
+        $ticket->status = 'cerrado';
+        $ticket->save(); //  GUARDAR PRIMERO
+
         if($ticket->funcionario_id){
+
             $funcionario = Funcionario::find($ticket->funcionario_id);
 
             if($funcionario){
-                $funcionario->cambiarEstadoConHistorial('disponible');
+
+                $ticketsAbiertos = Ticket::where('funcionario_id', $funcionario->id)
+                    ->where('status','!=','cerrado')
+                    ->exists();
+
+                if(!$ticketsAbiertos){
+                    $funcionario->cambiarEstadoConHistorial('disponible');
+                }
+
             }
         }
 
+        $this->dispatch('reload-page');
+        return;
     }
     else{
         $ticket->status = 'abierto';
     }
 
     $ticket->save();
-      $this->dispatch('reload-page');
+    $this->dispatch('reload-page');
 }
 
 public function eliminarSector()
@@ -235,7 +247,9 @@ public function render()
     }
 
     return view('livewire.tickets', [
-        'funcionarios' => Funcionario::where('estado','disponible')
+        'funcionarios' => Funcionario::whereDoesntHave('tickets', function($q){
+                $q->where('status','!=','cerrado');
+            })
             ->orderBy('nombre')
             ->get(),
         'sectores' => Sector::orderBy('nombre')->get(),

@@ -3,7 +3,9 @@
 namespace App\Livewire;
 
 use App\Models\Funcionario;
+use App\Models\HerramientaPrestamo;
 use App\Models\HistorialEstadoFuncionario;
+use App\Models\Ticket;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -126,9 +128,27 @@ public function toggleHistorial($id)
 
 
    
+
 public function cambiarEstado($id, $estadoNuevo)
 {
     $funcionario = Funcionario::findOrFail($id);
+
+    // Si intentan ponerlo disponible manualmente
+    if ($estadoNuevo == 'disponible') {
+
+        $ticketsAbiertos = Ticket::where('funcionario_id', $funcionario->id)
+            ->where('status', '!=', 'cerrado')
+            ->exists();
+
+        $tienePrestamos = HerramientaPrestamo::where('funcionario_id', $funcionario->id)
+            ->where('estado', 'prestada')
+            ->exists();
+
+        if ($ticketsAbiertos || $tienePrestamos) {
+            session()->flash('error', 'No se puede poner disponible porque tiene tickets abiertos o herramientas prestadas.');
+            return;
+        }
+    }
 
     $funcionario->cambiarEstadoConHistorial($estadoNuevo);
 }
